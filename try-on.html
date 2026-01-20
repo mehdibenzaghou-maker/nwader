@@ -52,7 +52,7 @@ startButton.addEventListener("click", async () => {
   const faceAnchor = mindarThree.addAnchor(168); // nose bridge anchor
 
   const loader = new THREE.GLTFLoader();
-  loader.load("Nwader.glb", (gltf) => {
+  loader.load("https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb", (gltf) => {
     const glasses = gltf.scene;
     glasses.scale.set(0.01, 0.01, 0.01);
     glasses.position.set(0, 0.03, 0.02);
