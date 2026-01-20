@@ -422,7 +422,7 @@ window.testGLB = async function() {
     
     const testUrls = [
         // Vos URLs
-        'https://votre-bucket.r2.dev/glasses1.glb',
+        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
         // URLs de test
         'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
         'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'
