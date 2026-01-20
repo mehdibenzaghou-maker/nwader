@@ -30,7 +30,7 @@ class NwadriARFaceTracking {
             '1': {
                 name: 'Vortex Noir',
                 price: '€149',
-                glbFile: 'models/glasses1.glb',  // ← VOTRE FICHIER .glb
+                glbFile: 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb',  // ← VOTRE FICHIER .glb
                 scale: 0.12,                     // Ajustez selon votre modèle
                 position: { x: 0, y: 0, z: 0 },   // Sera ajusté par suivi facial
                 rotation: { x: 0, y: 0, z: 0 },
