@@ -152,4 +152,167 @@ class NwadriAR {
                 face.geometry.boundingBox.getCenter(center);
                 this.currentGlasses.position.copy(center);
                 this.currentGlasses.position.y -= 0.05;
-                this.currentGlasses.position.z -= 0.
+                this.currentGlasses.position.z -= 0.1;
+            }
+        }
+
+        // Rendu
+        this.renderer.render(this.scene, this.camera);
+        
+        // Prochaine frame
+        requestAnimationFrame(() => this.update());
+    }
+
+    async switchCamera() {
+        // Basculer entre caméra avant/arrière
+        this.videoDevice = this.videoDevice === 'user' ? 'environment' : 'user';
+        
+        if (this.isARActive) {
+            await this.stopAR();
+            setTimeout(() => this.startAR(), 500);
+        }
+    }
+
+    create3DPreviews() {
+        // Créer des prévisualisations 3D pour les produits
+        ['product3d-1', 'product3d-2', 'product3d-3'].forEach((id, index) => {
+            this.createProductPreview(id, index + 1);
+        });
+    }
+
+    createProductPreview(containerId, glassesIndex) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Créer une scène Three.js simple pour la prévisualisation
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        
+        renderer.setSize(300, 300);
+        container.appendChild(renderer.domElement);
+        
+        // Lumière
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+        
+        // Charger le modèle
+        const loader = new THREE.GLTFLoader();
+        loader.load(`assets/glasses${glassesIndex}.glb`, (gltf) => {
+            const model = gltf.scene;
+            model.scale.set(0.5, 0.5, 0.5);
+            scene.add(model);
+            
+            // Animation de rotation
+            function animate() {
+                requestAnimationFrame(animate);
+                model.rotation.y += 0.01;
+                renderer.render(scene, camera);
+            }
+            
+            camera.position.z = 2;
+            animate();
+        });
+    }
+
+    setupEventListeners() {
+        // Bouton démarrer AR
+        document.getElementById('startAR').addEventListener('click', () => {
+            this.showInstructions();
+        });
+
+        // Bouton arrêter AR
+        document.getElementById('stopAR').addEventListener('click', () => {
+            this.stopAR();
+        });
+
+        // Bouton changer caméra
+        document.getElementById('switchCamera').addEventListener('click', () => {
+            this.switchCamera();
+        });
+
+        // Sélection des lunettes
+        document.querySelectorAll('.glasses-card').forEach(card => {
+            card.addEventListener('click', async (e) => {
+                const glassesPath = e.currentTarget.dataset.glasses;
+                
+                // Mettre à jour la sélection visuelle
+                document.querySelectorAll('.glasses-card').forEach(c => {
+                    c.classList.remove('active');
+                });
+                e.currentTarget.classList.add('active');
+                
+                // Charger les nouvelles lunettes
+                if (this.isARActive) {
+                    await this.loadGlasses(glassesPath);
+                }
+            });
+        });
+
+        // Boutons "Essayer AR" dans la collection
+        document.querySelectorAll('.try-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const glassesPath = e.currentTarget.dataset.glasses;
+                
+                if (!this.isARActive) {
+                    // Si AR n'est pas actif, démarrer avec ces lunettes
+                    await this.startAR();
+                    setTimeout(() => {
+                        this.loadGlasses(glassesPath);
+                    }, 1000);
+                } else {
+                    // Sinon, juste changer les lunettes
+                    await this.loadGlasses(glassesPath);
+                }
+            });
+        });
+
+        // Modal instructions
+        const modal = document.getElementById('instructionsModal');
+        const closeModal = document.querySelector('.close-modal');
+        const startArModal = document.querySelector('.start-ar-modal');
+
+        closeModal.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+
+        startArModal.addEventListener('click', () => {
+            modal.classList.remove('active');
+            this.startAR();
+        });
+
+        // Formulaire de contact
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Merci pour votre message ! Nous vous répondrons bientôt.');
+            e.target.reset();
+        });
+
+        // Navigation mobile
+        const hamburger = document.getElementById('hamburger');
+        const navMenu = document.querySelector('.nav-menu');
+
+        hamburger.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+        });
+
+        // Fermer le menu mobile au clic sur un lien
+        document.querySelectorAll('.nav-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+            });
+        });
+    }
+
+    showInstructions() {
+        const modal = document.getElementById('instructionsModal');
+        modal.classList.add('active');
+    }
+}
+
+// Initialiser l'application quand la page est chargée
+document.addEventListener('DOMContentLoaded', () => {
+    window.nwadriApp = new NwadriAR();
+});
