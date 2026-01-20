@@ -1,9 +1,9 @@
-// --- Variables ---
+// --- Three.js variables ---
 let scene, camera, renderer, glasses;
 let video = document.getElementById('video');
 let startButton = document.getElementById('startButton');
 
-// --- Three.js Setup ---
+// --- Three.js setup ---
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.z = 2;
@@ -13,7 +13,7 @@ document.body.appendChild(renderer.domElement);
 
 // Lighting
 const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-light.position.set(0, 1, 1);
+light.position.set(0,1,1);
 scene.add(light);
 
 // Load your Nwader.glb glasses
@@ -22,7 +22,7 @@ loader.load(
   'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb',
   function(gltf){
     glasses = gltf.scene;
-    glasses.scale.set(0.3, 0.3, 0.3);
+    glasses.scale.set(0.3,0.3,0.3);
     glasses.position.z = 0;
     scene.add(glasses);
   },
@@ -30,7 +30,7 @@ loader.load(
   function(error){ console.error("Failed to load GLB:", error);}
 );
 
-// --- MediaPipe FaceMesh ---
+// --- MediaPipe FaceMesh setup ---
 const faceMesh = new FaceMesh.FaceMesh({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
 });
@@ -45,15 +45,20 @@ faceMesh.onResults(onResults);
 // --- Start Camera ---
 startButton.addEventListener('click', async () => {
   startButton.style.display = 'none';
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-  video.srcObject = stream;
-  video.onloadedmetadata = () => {
-    video.play();
-    requestAnimationFrame(sendFrame);
-  };
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      video.play();
+      requestAnimationFrame(sendFrame);
+    };
+  } catch(e){
+    alert("Camera access denied or not available.");
+    console.error(e);
+  }
 });
 
-// --- Send video frames to MediaPipe ---
+// --- Send frames to MediaPipe ---
 function sendFrame(){
   if(video.readyState >= 2){
     faceMesh.send({ image: video });
@@ -61,7 +66,7 @@ function sendFrame(){
   requestAnimationFrame(sendFrame);
 }
 
-// --- Position glasses on face ---
+// --- Position glasses ---
 function onResults(results){
   if(!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0 || !glasses) return;
   const lm = results.multiFaceLandmarks[0];
