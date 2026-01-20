@@ -693,6 +693,51 @@
             `;
             document.head.appendChild(style);
         });
-    </script>
+    <script>
+    // Fallback si MindAR ne charge pas
+    setTimeout(() => {
+        if (typeof MINDAR === 'undefined') {
+            console.log('MindAR non chargé, utilisation du mode démo');
+            
+            // Mode démo sans AR
+            document.getElementById('startAR').addEventListener('click', function() {
+                const canvas = document.getElementById('ar-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Dessiner un visage et des lunettes de démonstration
+                ctx.fillStyle = '#f0c9a6';
+                ctx.beginPath();
+                ctx.ellipse(250, 200, 100, 120, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Yeux
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(200, 180, 20, 15, 0, 0, Math.PI * 2);
+                ctx.ellipse(300, 180, 20, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Pupilles
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(200, 180, 8, 0, Math.PI * 2);
+                ctx.arc(300, 180, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Lunettes
+                ctx.strokeStyle = 'gold';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.arc(200, 180, 30, 0, Math.PI * 2);
+                ctx.arc(300, 180, 30, 0, Math.PI * 2);
+                ctx.moveTo(230, 180);
+                ctx.lineTo(270, 180);
+                ctx.stroke();
+                
+                alert('Mode démo activé. Pour l\'AR complet, assurez-vous d\'avoir une connexion internet.');
+            });
+        }
+    }, 3000);
+</script>
 </body>
 </html>
