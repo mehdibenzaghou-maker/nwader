@@ -3,10 +3,10 @@ class NwadriAR {
     constructor() {
         // OPTION 1: Vos URLs R2 (remplacez par vos vrais liens)
         this.R2_URLS = {
-            '1': 'VOTRE_URL_R2_1', // Remplacez par votre URL R2
-            '2': 'VOTRE_URL_R2_2', // Remplacez par votre URL R2
-            '3': 'VOTRE_URL_R2_3', // Remplacez par votre URL R2
-            '4': 'VOTRE_URL_R2_4'  // Remplacez par votre URL R2
+            '1': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb', // Remplacez par votre URL R2
+            '2': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb', // Remplacez par votre URL R2
+            '3': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb', // Remplacez par votre URL R2
+            '4': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb'  // Remplacez par votre URL R2
         };
         
         // OPTION 2: Fichiers locaux (dans le dossier models/)
