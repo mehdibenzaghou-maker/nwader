@@ -3,741 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nwadri - Lunettes de Soleil AR</title>
+    <title>NWADRI - Lunettes AR</title>
     
     <style>
-        /* === STYLES COMPLETS === */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* RESET */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0a0a0a;
             color: white;
             min-height: 100vh;
             overflow-x: hidden;
         }
-
-        /* Navigation */
-        .navbar {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 1rem 2rem;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            backdrop-filter: blur(10px);
-        }
-
-        .nav-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        
+        /* CONTAINER PRINCIPAL */
+        .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 20px;
         }
-
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-        }
-
-        .nav-menu {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-menu a {
-            color: white;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            transition: all 0.3s;
-        }
-
-        .nav-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Hero */
-        .hero {
-            padding: 10rem 2rem 4rem;
+        
+        /* HEADER */
+        header {
             text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 40px;
         }
-
-        .hero-title {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
             background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
-        .hero-subtitle {
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
+        
+        .tagline {
+            font-size: 1.2rem;
             opacity: 0.9;
+            margin-bottom: 30px;
         }
-
-        /* AR Section */
-        .ar-section {
-            padding: 2rem;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .section-subtitle {
-            text-align: center;
-            margin-bottom: 2rem;
-            opacity: 0.8;
-        }
-
-        .ar-container {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-top: 2rem;
-        }
-
-        .camera-controls {
+        
+        /* CONTROLES */
+        .controls {
             display: flex;
-            gap: 1rem;
+            gap: 15px;
             justify-content: center;
-            margin-bottom: 2rem;
             flex-wrap: wrap;
+            margin-bottom: 30px;
         }
-
+        
         .btn {
-            padding: 1rem 2rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
             color: white;
             border: none;
             border-radius: 50px;
             font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s;
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 10px;
+            font-weight: 600;
         }
-
+        
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
         }
-
-        .ar-viewport {
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+        
+        /* ZONE AR */
+        .ar-zone {
             width: 100%;
-            height: 500px;
-            background: black;
-            border-radius: 15px;
-            overflow: hidden;
+            max-width: 800px;
+            margin: 0 auto 40px;
             position: relative;
-            margin-bottom: 2rem;
         }
-
+        
         #ar-canvas {
             width: 100%;
-            height: 100%;
+            height: 500px;
+            background: #000;
+            border-radius: 15px;
             display: block;
         }
-
+        
         .loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            color: white;
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #4ecdc4;
         }
-
+        
         .loading i {
             font-size: 3rem;
-            margin-bottom: 1rem;
+            color: #4ecdc4;
+            margin-bottom: 15px;
         }
-
-        /* Glasses Selector */
+        
+        /* SELECTION LUNETTES */
         .glasses-selector {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
+            background: rgba(255,255,255,0.05);
+            padding: 25px;
             border-radius: 15px;
+            margin-top: 30px;
         }
-
+        
         .glasses-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
+            gap: 20px;
+            margin-top: 20px;
         }
-
-        .glasses-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
+        
+        .glass-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
             border-radius: 10px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
-            border: 2px solid transparent;
         }
-
-        .glasses-card:hover {
-            background: rgba(255, 255, 255, 0.2);
+        
+        .glass-card:hover {
+            background: rgba(255,255,255,0.15);
             transform: translateY(-5px);
         }
-
-        .glasses-card.active {
+        
+        .glass-card.active {
             border-color: #4ecdc4;
             background: rgba(78, 205, 196, 0.2);
         }
-
-        .glasses-preview {
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.1);
+        
+        .glass-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+        
+        .glass-name {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .glass-price {
+            color: #4ecdc4;
+            font-weight: 600;
+        }
+        
+        /* STATUT */
+        .status {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
             border-radius: 10px;
-            margin: 0 auto 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 2rem;
-            margin-top: 4rem;
-            background: rgba(0, 0, 0, 0.3);
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
+        
+        /* MESSAGES */
+        .message {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #4ecdc4;
+            color: white;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-
-        .modal.active {
-            display: flex;
+        
+        .message.error {
+            background: #ff6b6b;
         }
-
-        .modal-content {
-            background: white;
-            color: #333;
-            padding: 3rem;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-
-        .close-modal {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 2rem;
-            cursor: pointer;
-            color: #333;
-        }
-
+        
+        /* RESPONSIVE */
         @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.5rem;
-            }
-            
-            .nav-menu {
-                display: none;
-            }
-            
-            .ar-viewport {
-                height: 400px;
-            }
-            
-            .glasses-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            h1 { font-size: 2.5rem; }
+            .btn { padding: 12px 24px; }
+            #ar-canvas { height: 400px; }
+            .glasses-grid { grid-template-columns: repeat(2, 1fr); }
         }
-
+        
         @media (max-width: 480px) {
-            .glasses-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .ar-viewport {
-                height: 300px;
-            }
+            .glasses-grid { grid-template-columns: 1fr; }
+            #ar-canvas { height: 300px; }
         }
     </style>
-
-    <!-- Three.js depuis CDN -->
+    
+    <!-- Three.js depuis CDN fiable -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
     
-    <!-- MindAR depuis CDN fonctionnel -->
-    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.0/dist/mindar-face.prod.js"></script>
-    
-    <!-- Font Awesome pour icônes -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="#" class="logo">NWADRI</a>
-            <ul class="nav-menu">
-                <li><a href="#home">Accueil</a></li>
-                <li><a href="#try-on">Essayer AR</a></li>
-                <li><a href="#collection">Collection</a></li>
-                <li><a href="#contact">Contact</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <h1 class="hero-title">NWADRI</h1>
-        <p class="hero-subtitle">Essayez vos lunettes de soleil en réalité augmentée</p>
-        <p>Voyez comment les lunettes vous vont directement sur votre visage grâce à la technologie AR</p>
-        <a href="#try-on" class="btn" style="margin-top: 2rem;">
-            <i class="fas fa-camera"></i> Essayer Maintenant
-        </a>
-    </section>
-
-    <!-- AR Section -->
-    <section id="try-on" class="ar-section">
-        <h2 class="section-title">Essayer les Lunettes en AR</h2>
-        <p class="section-subtitle">Activez votre caméra et voyez les lunettes sur votre visage en temps réel</p>
-        
-        <div class="ar-container">
-            <div class="camera-controls">
+    <div class="container">
+        <header>
+            <h1>NWADRI</h1>
+            <p class="tagline">Essayez vos lunettes de soleil en réalité augmentée</p>
+            
+            <div class="controls">
                 <button id="startAR" class="btn">
-                    <i class="fas fa-play"></i> Démarrer AR
+                    <i class="fas fa-camera"></i> Démarrer AR
                 </button>
-                <button id="stopAR" class="btn btn-secondary" disabled>
+                <button id="stopAR" class="btn btn-danger" disabled>
                     <i class="fas fa-stop"></i> Arrêter AR
                 </button>
+                <button id="testModel" class="btn">
+                    <i class="fas fa-vial"></i> Tester Modèle
+                </button>
             </div>
-            
-            <div class="ar-viewport">
+        </header>
+        
+        <main>
+            <div class="ar-zone">
                 <canvas id="ar-canvas"></canvas>
-                <div id="loading" class="loading">
+                
+                <div id="loading" class="loading" style="display: none;">
                     <i class="fas fa-spinner fa-spin"></i>
                     <p>Initialisation de l'AR...</p>
                 </div>
             </div>
             
             <div class="glasses-selector">
-                <h3>Choisissez vos lunettes</h3>
+                <h2 style="text-align: center; margin-bottom: 20px;">
+                    <i class="fas fa-sunglasses"></i> Choisissez vos lunettes
+                </h2>
+                
                 <div class="glasses-grid">
-                    <button class="glasses-card active" data-glasses="1">
-                        <div class="glasses-preview">
-                            <i class="fas fa-sunglasses"></i>
-                        </div>
-                        <h4>Classic Black</h4>
-                    </button>
-                    <button class="glasses-card" data-glasses="2">
-                        <div class="glasses-preview">
-                            <i class="fas fa-sun"></i>
-                        </div>
-                        <h4>Golden Style</h4>
-                    </button>
-                    <button class="glasses-card" data-glasses="3">
-                        <div class="glasses-preview">
+                    <div class="glass-card active" data-model="1">
+                        <div class="glass-icon">
                             <i class="fas fa-glasses"></i>
                         </div>
-                        <h4>Retro Aviator</h4>
-                    </button>
-                    <button class="glasses-card" data-glasses="4">
-                        <div class="glasses-preview">
-                            <i class="fas fa-eye"></i>
+                        <div class="glass-name">Classic Black</div>
+                        <div class="glass-price">€129</div>
+                    </div>
+                    
+                    <div class="glass-card" data-model="2">
+                        <div class="glass-icon">
+                            <i class="fas fa-sun"></i>
                         </div>
-                        <h4>Modern Blue</h4>
-                    </button>
+                        <div class="glass-name">Golden Style</div>
+                        <div class="glass-price">€159</div>
+                    </div>
+                    
+                    <div class="glass-card" data-model="3">
+                        <div class="glass-icon">
+                            <i class="fas fa-meteor"></i>
+                        </div>
+                        <div class="glass-name">Space Grey</div>
+                        <div class="glass-price">€179</div>
+                    </div>
+                    
+                    <div class="glass-card" data-model="4">
+                        <div class="glass-icon">
+                            <i class="fas fa-water"></i>
+                        </div>
+                        <div class="glass-name">Ocean Blue</div>
+                        <div class="glass-price">€149</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- Modal Instructions -->
-    <div id="instructionsModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Instructions AR</h2>
-            <ol style="text-align: left; margin: 2rem 0; padding-left: 1.5rem;">
-                <li>Autorisez l'accès à votre caméra</li>
-                <li>Positionnez votre visage dans le cadre</li>
-                <li>Choisissez des lunettes dans la collection</li>
-                <li>Tournez la tête pour voir sous tous les angles</li>
-                <li>Cliquez sur "Arrêter AR" quand vous avez fini</li>
-            </ol>
-            <button id="startFromModal" class="btn">Commencer l'expérience AR</button>
-        </div>
+            
+            <div class="status" id="status">
+                <i class="fas fa-info-circle"></i> Prêt à démarrer
+            </div>
+        </main>
     </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <p>&copy; 2024 Nwadri - Lunettes de Soleil AR. Tous droits réservés.</p>
-        <p style="margin-top: 1rem; opacity: 0.7;">
-            <i class="fas fa-camera"></i> Fonctionne avec MindAR + Three.js
-        </p>
-    </footer>
-
-    <!-- SCRIPT COMPLET AVEC MINDAR -->
-    <script>
-        class NwadriARApp {
-            constructor() {
-                this.mindarThree = null;
-                this.renderer = null;
-                this.scene = null;
-                this.camera = null;
-                this.currentGlasses = null;
-                this.isARActive = false;
-                this.currentModel = '1';
-                
-                this.glassModels = {
-                    '1': this.createGlassesModel('#000000', '#1a5276'),
-                    '2': this.createGlassesModel('#FFD700', '#FFA500'),
-                    '3': this.createGlassesModel('#2C3E50', '#7F8C8D'),
-                    '4': this.createGlassesModel('#3498DB', '#2980B9')
-                };
-                
-                this.initialize();
-                this.setupEventListeners();
-            }
-            
-            createGlassesModel(frameColor, lensColor) {
-                const group = new THREE.Group();
-                
-                // Frame
-                const frameGeometry = new THREE.TorusGeometry(0.15, 0.01, 16, 100);
-                const frameMaterial = new THREE.MeshBasicMaterial({ color: frameColor });
-                
-                const leftFrame = new THREE.Mesh(frameGeometry, frameMaterial);
-                leftFrame.position.x = -0.2;
-                
-                const rightFrame = new THREE.Mesh(frameGeometry, frameMaterial);
-                rightFrame.position.x = 0.2;
-                
-                // Bridge
-                const bridgeGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1);
-                const bridge = new THREE.Mesh(bridgeGeometry, frameMaterial);
-                bridge.position.x = 0;
-                
-                // Lenses
-                const lensGeometry = new THREE.CircleGeometry(0.12, 32);
-                const lensMaterial = new THREE.MeshBasicMaterial({ 
-                    color: lensColor,
-                    transparent: true,
-                    opacity: 0.6
-                });
-                
-                const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
-                leftLens.position.x = -0.2;
-                leftLens.position.z = 0.01;
-                
-                const rightLens = new THREE.Mesh(lensGeometry, lensMaterial);
-                rightLens.position.x = 0.2;
-                rightLens.position.z = 0.01;
-                
-                // Temples
-                const templeGeometry = new THREE.BoxGeometry(0.3, 0.01, 0.01);
-                const leftTemple = new THREE.Mesh(templeGeometry, frameMaterial);
-                leftTemple.position.set(-0.35, 0, 0);
-                leftTemple.rotation.z = -0.2;
-                
-                const rightTemple = new THREE.Mesh(templeGeometry, frameMaterial);
-                rightTemple.position.set(0.35, 0, 0);
-                rightTemple.rotation.z = 0.2;
-                
-                group.add(leftFrame, rightFrame, bridge, leftLens, rightLens, leftTemple, rightTemple);
-                return group;
-            }
-            
-            initialize() {
-                const canvas = document.getElementById('ar-canvas');
-                canvas.width = canvas.clientWidth;
-                canvas.height = canvas.clientHeight;
-            }
-            
-            async startAR() {
-                try {
-                    document.getElementById('loading').style.display = 'block';
-                    
-                    // Check if MindAR is available
-                    if (typeof MINDAR === 'undefined') {
-                        throw new Error('MindAR n\'est pas chargé. Vérifiez votre connexion internet.');
-                    }
-                    
-                    this.mindarThree = new MINDAR.FACE.MindARThree({
-                        container: document.querySelector('.ar-viewport'),
-                        maxTrack: 1
-                    });
-                    
-                    const { renderer, scene, camera } = this.mindarThree;
-                    this.renderer = renderer;
-                    this.scene = scene;
-                    this.camera = camera;
-                    
-                    // Create face anchor
-                    const faceMesh = this.mindarThree.addFaceMesh();
-                    
-                    // Add glasses to face mesh
-                    this.loadCurrentGlasses();
-                    faceMesh.add(this.currentGlasses);
-                    scene.add(faceMesh);
-                    
-                    // Start AR
-                    await this.mindarThree.start();
-                    this.isARActive = true;
-                    
-                    // Update UI
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('startAR').disabled = true;
-                    document.getElementById('stopAR').disabled = false;
-                    
-                    // Start render loop
-                    this.renderer.setAnimationLoop(() => {
-                        this.renderer.render(this.scene, this.camera);
-                    });
-                    
-                } catch (error) {
-                    console.error('Erreur AR:', error);
-                    document.getElementById('loading').style.display = 'none';
-                    alert('Erreur: ' + error.message + '\n\nAssurez-vous d\'avoir une caméra et d\'autoriser l\'accès.');
-                }
-            }
-            
-            async stopAR() {
-                if (this.mindarThree) {
-                    this.renderer.setAnimationLoop(null);
-                    await this.mindarThree.stop();
-                    this.mindarThree = null;
-                    this.isARActive = false;
-                    
-                    // Update UI
-                    document.getElementById('startAR').disabled = false;
-                    document.getElementById('stopAR').disabled = true;
-                }
-            }
-            
-            loadCurrentGlasses() {
-                if (this.currentGlasses && this.scene) {
-                    this.scene.remove(this.currentGlasses);
-                }
-                
-                this.currentGlasses = this.glassModels[this.currentModel].clone();
-                this.currentGlasses.scale.set(1.5, 1.5, 1.5);
-                this.currentGlasses.position.set(0, -0.3, -0.3);
-                
-                return this.currentGlasses;
-            }
-            
-            setupEventListeners() {
-                // Start AR Button
-                document.getElementById('startAR').addEventListener('click', () => {
-                    this.showInstructions();
-                });
-                
-                // Stop AR Button
-                document.getElementById('stopAR').addEventListener('click', () => {
-                    this.stopAR();
-                });
-                
-                // Glasses Selection
-                document.querySelectorAll('.glasses-card').forEach(card => {
-                    card.addEventListener('click', (e) => {
-                        const glassesId = e.currentTarget.dataset.glasses;
-                        
-                        // Update UI
-                        document.querySelectorAll('.glasses-card').forEach(c => {
-                            c.classList.remove('active');
-                        });
-                        e.currentTarget.classList.add('active');
-                        
-                        // Update glasses model
-                        this.currentModel = glassesId;
-                        
-                        // If AR is active, update glasses
-                        if (this.isARActive && this.scene) {
-                            const newGlasses = this.loadCurrentGlasses();
-                            
-                            // Find face mesh and replace glasses
-                            this.scene.children.forEach(child => {
-                                if (child.isGroup && child.children.length > 0) {
-                                    // Remove old glasses
-                                    const oldGlasses = child.children.find(c => c === this.currentGlasses);
-                                    if (oldGlasses) {
-                                        child.remove(oldGlasses);
-                                    }
-                                    // Add new glasses
-                                    child.add(newGlasses);
-                                }
-                            });
-                        }
-                    });
-                });
-                
-                // Modal Controls
-                const modal = document.getElementById('instructionsModal');
-                const closeBtn = document.querySelector('.close-modal');
-                const startModalBtn = document.getElementById('startFromModal');
-                
-                closeBtn.addEventListener('click', () => {
-                    modal.classList.remove('active');
-                });
-                
-                startModalBtn.addEventListener('click', () => {
-                    modal.classList.remove('active');
-                    this.startAR();
-                });
-                
-                // Show modal when start button is clicked
-                document.getElementById('startAR').addEventListener('click', () => {
-                    modal.classList.add('active');
-                });
-                
-                // Smooth scroll for navigation
-                document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                    anchor.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const targetId = this.getAttribute('href');
-                        if (targetId === '#') return;
-                        
-                        const targetElement = document.querySelector(targetId);
-                        if (targetElement) {
-                            targetElement.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                        }
-                    });
-                });
-                
-                // Handle window resize
-                window.addEventListener('resize', () => {
-                    if (this.isARActive && this.renderer) {
-                        const canvas = document.getElementById('ar-canvas');
-                        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-                    }
-                });
-            }
-            
-            showInstructions() {
-                const modal = document.getElementById('instructionsModal');
-                modal.classList.add('active');
-            }
-        }
-        
-        // Initialize app when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check for WebGL support
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('Votre navigateur ne supporte pas l\'accès à la caméra. Veuillez utiliser Chrome, Firefox ou Safari.');
-                return;
-            }
-            
-            window.nwadriApp = new NwadriARApp();
-            
-            // Add some fun effects
-            const titles = document.querySelectorAll('.hero-title, .section-title');
-            titles.forEach(title => {
-                title.addEventListener('mouseenter', () => {
-                    title.style.transform = 'scale(1.05)';
-                    title.style.transition = 'transform 0.3s';
-                });
-                
-                title.addEventListener('mouseleave', () => {
-                    title.style.transform = 'scale(1)';
-                });
-            });
-            
-            // Add floating animation to glasses cards
-            const cards = document.querySelectorAll('.glasses-card');
-            cards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.1}s`;
-                card.style.animation = 'float 3s ease-in-out infinite';
-            });
-            
-            // Add CSS for float animation
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-            `;
-            document.head.appendChild(style);
-        });
-    <script>
-    // Fallback si MindAR ne charge pas
-    setTimeout(() => {
-        if (typeof MINDAR === 'undefined') {
-            console.log('MindAR non chargé, utilisation du mode démo');
-            
-            // Mode démo sans AR
-            document.getElementById('startAR').addEventListener('click', function() {
-                const canvas = document.getElementById('ar-canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Dessiner un visage et des lunettes de démonstration
-                ctx.fillStyle = '#f0c9a6';
-                ctx.beginPath();
-                ctx.ellipse(250, 200, 100, 120, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Yeux
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(200, 180, 20, 15, 0, 0, Math.PI * 2);
-                ctx.ellipse(300, 180, 20, 15, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Pupilles
-                ctx.fillStyle = 'black';
-                ctx.beginPath();
-                ctx.arc(200, 180, 8, 0, Math.PI * 2);
-                ctx.arc(300, 180, 8, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Lunettes
-                ctx.strokeStyle = 'gold';
-                ctx.lineWidth = 5;
-                ctx.beginPath();
-                ctx.arc(200, 180, 30, 0, Math.PI * 2);
-                ctx.arc(300, 180, 30, 0, Math.PI * 2);
-                ctx.moveTo(230, 180);
-                ctx.lineTo(270, 180);
-                ctx.stroke();
-                
-                alert('Mode démo activé. Pour l\'AR complet, assurez-vous d\'avoir une connexion internet.');
-            });
-        }
-    }, 3000);
-</script>
+    
+    <!-- Script principal -->
+    <script src="app.js"></script>
 </body>
 </html>
