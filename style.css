@@ -1,12 +1,55 @@
-body { margin: 0; overflow: hidden; background: #000; }
-button#openCamera {
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #121212;
+  color: #fff;
+  overflow: hidden;
+}
+
+#container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  text-align: center;
+}
+
+h1 {
   position: absolute;
-  top: 20px; left: 50%;
+  top: 10px;
+  left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  padding: 10px 20px;
-  font-size: 18px;
-  cursor: pointer;
+  font-size: 24px;
 }
-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-canvas { position: absolute; top: 0; left: 0; z-index: 2; }
+
+button#startButton {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 12px 24px;
+  font-size: 18px;
+  background-color: #ff5722;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+}
+
+video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
