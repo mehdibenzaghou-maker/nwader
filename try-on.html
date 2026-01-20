@@ -23,12 +23,24 @@
       border-radius: 30px;
       font-size: 16px;
       font-weight: bold;
+      cursor: pointer;
+    }
+    #error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: red;
+      text-align: center;
+      font-size: 16px;
+      display: none;
     }
   </style>
 </head>
 <body>
 
 <button id="start">Start Camera</button>
+<div id="error"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/GLTFLoader.js"></script>
@@ -36,37 +48,64 @@
 
 <script>
 const startButton = document.getElementById("start");
+const errorDiv = document.getElementById("error");
+
+// Your R2-hosted GLB
+const GLB_URL = "https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb";
 
 startButton.addEventListener("click", async () => {
   startButton.style.display = "none";
 
-  const mindarThree = new window.MINDAR.FACE.MindARThree({
-    container: document.body
-  });
+  try {
+    const mindarThree = new window.MINDAR.FACE.MindARThree({ container: document.body });
+    const { renderer, scene, camera } = mindarThree;
 
-  const { renderer, scene, camera } = mindarThree;
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(light);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-  scene.add(light);
+    // Face anchor for glasses
+    const faceAnchor = mindarThree.addAnchor(168);
 
-  const faceAnchor = mindarThree.addAnchor(168); // nose bridge anchor
+    // Anchors for auto-scaling
+    const leftEye = mindarThree.addAnchor(33);
+    const rightEye = mindarThree.addAnchor(263);
 
-  const loader = new THREE.GLTFLoader();
-  loader.load("https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb", (gltf) => {
-    const glasses = gltf.scene;
-    glasses.scale.set(0.01, 0.01, 0.01);
-    glasses.position.set(0, 0.03, 0.02);
-    faceAnchor.group.add(glasses);
-  });
+    let glasses;
+    const loader = new THREE.GLTFLoader();
+    loader.load(GLB_URL, (gltf) => {
+      glasses = gltf.scene;
+      glasses.position.set(0, 0.03, 0.02); // adjust vertical position
+      faceAnchor.group.add(glasses);
+    }, undefined, (err) => {
+      console.error("Failed to load GLB:", err);
+      errorDiv.style.display = "block";
+      errorDiv.innerText = "Failed to load sunglasses. Check your URL or CORS settings.";
+    });
 
-  await mindarThree.start();
+    await mindarThree.start();
 
-  renderer.setAnimationLoop(() => {
-    renderer.render(scene, camera);
-  });
+    renderer.setAnimationLoop(() => {
+      // Auto-fit scale based on eye distance
+      if (glasses && leftEye.group.visible && rightEye.group.visible) {
+        const leftPos = new THREE.Vector3();
+        const rightPos = new THREE.Vector3();
+
+        leftEye.group.getWorldPosition(leftPos);
+        rightEye.group.getWorldPosition(rightPos);
+
+        const eyeDistance = leftPos.distanceTo(rightPos);
+        const scale = eyeDistance * 2.3; // tweak if needed
+        glasses.scale.set(scale, scale, scale);
+      }
+      renderer.render(scene, camera);
+    });
+  } catch (err) {
+    console.error("Error starting MindAR:", err);
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Cannot start camera. Make sure you allow permissions and are on HTTPS.";
+  }
 });
 </script>
 
 </body>
 </html>
-
