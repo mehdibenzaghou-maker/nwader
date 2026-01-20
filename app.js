@@ -161,15 +161,81 @@ class NwadriARApp {
     }
     
     createGlassesModel(modelId) {
-        const modelInfo = this.glassModels[modelId];
-        if (!modelInfo) {
-            console.error('Modèle non trouvé:', modelId);
-            return this.createDefaultGlasses();
-        }
+    const modelInfo = this.glassModels[modelId];
+    if (!modelInfo) {
+        console.error('Modèle non trouvé:', modelId);
+        return this.createDefaultGlasses();
+    }
+    
+    // VOTRE CODE ICI - Charger vos fichiers .glb
+    
+    const group = new THREE.Group();
+    group.name = `glasses-${modelId}`;
+    
+    // Charger le modèle GLB selon l'ID
+    return this.loadGLBModel(modelId, group);
+}
+
+async loadGLBModel(modelId, parentGroup) {
+    // MAPPAGE de vos fichiers .glb
+    const modelPaths = {
+        '1': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb',  // Classic Black
+        '2': 'https://votre-domaine.com/models/glasses2.glb',  // Golden Style
+        '3': 'https://votre-domaine.com/models/glasses3.glb',  // Retro Aviator
+        '4': 'https://votre-domaine.com/models/glasses4.glb',  // Modern Blue
+        '5': 'https://votre-domaine.com/models/glasses5.glb',  // Rose Gold
+        '6': 'https://votre-domaine.com/models/glasses6.glb'   // Sport Black
+    };
+    
+    const modelPath = modelPaths[modelId];
+    
+    if (!modelPath) {
+        console.error('Chemin du modèle non trouvé pour:', modelId);
+        return parentGroup;
+    }
+    
+    try {
+        const loader = new THREE.GLTFLoader();
         
-        const group = new THREE.Group();
-        group.name = `glasses-${modelId}`;
+        // Charger le modèle GLB
+        const gltf = await new Promise((resolve, reject) => {
+            loader.load(
+                modelPath,
+                resolve,
+                // Progression du chargement
+                (xhr) => {
+                    console.log(`Chargement ${modelId}: ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
+                },
+                reject
+            );
+        });
         
+        // Configurer le modèle
+        const model = gltf.scene;
+        
+        // Ajuster l'échelle (à adapter selon vos modèles)
+        model.scale.set(0.3, 0.3, 0.3);
+        
+        // Positionner sur le visage
+        model.position.set(0, -0.2, -0.3);
+        
+        // Rotation si nécessaire
+        model.rotation.set(0, 0, 0);
+        
+        // Ajouter au groupe parent
+        parentGroup.add(model);
+        
+        console.log(`Modèle ${modelId} chargé avec succès:`, modelPath);
+        
+        return parentGroup;
+        
+    } catch (error) {
+        console.error(`Erreur de chargement du modèle ${modelId}:`, error);
+        
+        // Fallback: créer des lunettes de base
+        return this.createDefaultGlasses();
+    }
+}
         // Paramètres des lunettes
         const frameRadius = 0.15;
         const bridgeWidth = 0.05;
