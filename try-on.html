@@ -49,23 +49,67 @@
 const startButton = document.getElementById("start");
 const errorDiv = document.getElementById("error");
 
-// Your R2-hosted GLB
-const GLB_URL = "https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb";
+// Example GLB to test
+const GLB_URL = "https://models.babylonjs.com/boombox.glb";
 
-// Check if page is HTTPS
 if (window.location.protocol !== "https:") {
   errorDiv.style.display = "block";
-  errorDiv.innerText = "WebAR requires HTTPS. Please open the site via HTTPS.";
+  errorDiv.innerText = "WebAR requires HTTPS. Please open via HTTPS.";
   startButton.style.display = "none";
 }
 
-// Main start function
 startButton.addEventListener("click", async () => {
   startButton.style.display = "none";
 
   try {
-    // Initialize MindAR
     const mindarThree = new window.MINDAR.FACE.MindARThree({ container: document.body });
     const { renderer, scene, camera } = mindarThree;
 
-    const light = new
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(light);
+
+    const faceAnchor = mindarThree.addAnchor(168);
+    const leftEye = mindarThree.addAnchor(33);
+    const rightEye = mindarThree.addAnchor(263);
+
+    let model;
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      GLB_URL,
+      (gltf) => {
+        model = gltf.scene;
+        model.position.set(0, 0.03, 0.02);
+        faceAnchor.group.add(model);
+      },
+      undefined,
+      (err) => {
+        errorDiv.style.display = "block";
+        errorDiv.innerText = "Failed to load test model.";
+      }
+    );
+
+    await mindarThree.start();
+
+    renderer.setAnimationLoop(() => {
+      if (model && leftEye.group.visible && rightEye.group.visible) {
+        const leftPos = new THREE.Vector3();
+        const rightPos = new THREE.Vector3();
+        leftEye.group.getWorldPosition(leftPos);
+        rightEye.group.getWorldPosition(rightPos);
+
+        const eyeDistance = leftPos.distanceTo(rightPos);
+        const scale = eyeDistance * 2.3;
+        model.scale.set(scale, scale, scale);
+      }
+      renderer.render(scene, camera);
+    });
+
+  } catch (err) {
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Cannot start camera. Allow camera permissions.";
+  }
+});
+</script>
+
+</body>
+</html>
