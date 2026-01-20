@@ -1,46 +1,68 @@
-// NWADRI AR - Solution garantie avec 3 options de secours
-class NwadriAR {
+// NWADRI AR - Système complet avec caméra
+class NwadriARCamera {
     constructor() {
-        // OPTION 1: Vos URLs R2 (remplacez par vos vrais liens)
-        this.R2_URLS = {
-            '1': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb', // Remplacez par votre URL R2
-            '2': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb', // Remplacez par votre URL R2
-            '3': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb', // Remplacez par votre URL R2
-            '4': 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb'  // Remplacez par votre URL R2
-        };
-        
-        // OPTION 2: Fichiers locaux (dans le dossier models/)
-        this.LOCAL_URLS = {
-            '1': 'models/glasses1.glb',
-            '2': 'models/glasses2.glb',
-            '3': 'models/glasses3.glb',
-            '4': 'models/glasses4.glb'
-        };
-        
-        // OPTION 3: Modèles 3D générés (fallback garanti)
-        this.FALLBACK_MODELS = {
-            '1': this.createBasicGlasses('#000000', '#1a5276'),
-            '2': this.createBasicGlasses('#FFD700', '#FFA500'),
-            '3': this.createBasicGlasses('#2C3E50', '#7F8C8D'),
-            '4': this.createBasicGlasses('#3498DB', '#2980B9')
-        };
+        // Éléments DOM
+        this.video = document.getElementById('video');
+        this.canvas = document.getElementById('ar-canvas');
+        this.loading = document.getElementById('loading');
+        this.loadingText = document.getElementById('loading-text');
         
         // État de l'application
+        this.isCameraActive = false;
         this.isARActive = false;
         this.currentModel = '1';
+        this.currentCamera = 'user'; // 'user' = frontal, 'environment' = arrière
+        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // Variables Three.js
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.videoTexture = null;
+        this.videoMesh = null;
+        this.currentGlasses = null;
+        
+        // Cache des modèles
         this.modelCache = new Map();
         
+        // Configuration des modèles
+        this.models = {
+            '1': {
+                name: 'Vortex Noir',
+                price: '€149',
+                color: '#000000',
+                scale: 0.25,
+                position: { x: 0, y: -0.1, z: -0.4 }
+            },
+            '2': {
+                name: 'Solar Gold',
+                price: '€179',
+                color: '#FFD700',
+                scale: 0.28,
+                position: { x: 0, y: -0.08, z: -0.38 }
+            },
+            '3': {
+                name: 'Nebula Grey',
+                price: '€169',
+                color: '#2C3E50',
+                scale: 0.26,
+                position: { x: 0, y: -0.09, z: -0.39 }
+            },
+            '4': {
+                name: 'Ocean Blue',
+                price: '€159',
+                color: '#3498DB',
+                scale: 0.27,
+                position: { x: 0, y: -0.07, z: -0.37 }
+            }
+        };
+        
+        // Initialisation
         this.init();
     }
     
-    async init() {
-        console.log('NWADRI AR - Initialisation...');
-        
-        // Vérifier la compatibilité
-        if (!this.checkCompatibility()) {
-            this.showMessage('Votre navigateur ne supporte pas WebGL', 'error');
-            return;
-        }
+    init() {
+        console.log('🚀 NWADRI AR - Initialisation...');
         
         // Initialiser le canvas
         this.initCanvas();
@@ -48,321 +70,378 @@ class NwadriAR {
         // Configurer les événements
         this.setupEventListeners();
         
-        // Tester les modèles immédiatement
-        await this.testAllModels();
+        // Mettre à jour l'interface
+        this.updateUI();
         
-        console.log('NWADRI AR - Prêt!');
-        this.updateStatus('Prêt à démarrer');
-    }
-    
-    checkCompatibility() {
-        // Vérifier WebGL
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        return !!(window.WebGLRenderingContext && gl && gl instanceof WebGLRenderingContext);
+        console.log('✅ NWADRI AR - Prêt!');
+        this.showMessage('Cliquez sur "Activer la Caméra" pour commencer', 'info');
     }
     
     initCanvas() {
-        this.canvas = document.getElementById('ar-canvas');
+        // Définir la taille du canvas
         this.canvas.width = this.canvas.clientWidth;
         this.canvas.height = this.canvas.clientHeight;
+        
+        // Pour mobile, ajuster la taille
+        if (this.isMobile) {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight * 0.6;
+        }
     }
     
-    async testAllModels() {
-        console.log('Test de tous les modèles...');
-        
-        for (const modelId of ['1', '2', '3', '4']) {
-            try {
-                // Essayer R2 d'abord
-                const success = await this.testModel(this.R2_URLS[modelId], `R2-${modelId}`);
-                
-                if (!success) {
-                    // Essayer local
-                    await this.testModel(this.LOCAL_URLS[modelId], `Local-${modelId}`);
-                }
-            } catch (error) {
-                console.log(`Modèle ${modelId} - Fallback activé`);
+    // ==================== GESTION CAMÉRA ====================
+    async startCamera() {
+        try {
+            this.showLoading('Accès à la caméra...');
+            
+            // Vérifier les permissions
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Votre navigateur ne supporte pas l\'accès à la caméra');
             }
-        }
-    }
-    
-    async testModel(url, name) {
-        if (!url || url === 'VOTRE_URL_R2_X') {
-            console.log(`${name}: URL non configurée`);
-            return false;
-        }
-        
-        try {
-            const response = await fetch(url, { method: 'HEAD' });
-            console.log(`${name}: ${response.status} - ${response.headers.get('content-type')}`);
-            return response.ok;
-        } catch (error) {
-            console.log(`${name}: Erreur - ${error.message}`);
-            return false;
-        }
-    }
-    
-    // FONCTION PRINCIPALE - Démarrer l'AR
-    async startAR() {
-        try {
-            this.showLoading(true);
-            this.updateStatus('Démarrage AR...');
             
-            // 1. Initialiser Three.js
-            await this.initThreeJS();
+            // Paramètres de la caméra
+            const constraints = {
+                video: {
+                    facingMode: this.currentCamera,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: false
+            };
             
-            // 2. Créer une scène simple (sans MindAR pour l'instant)
-            this.createSimpleScene();
+            // Obtenir le flux vidéo
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             
-            // 3. Charger les lunettes
-            await this.loadCurrentGlasses();
+            // Connecter au vidéo
+            this.video.srcObject = stream;
             
-            // 4. Démarrer l'animation
-            this.startAnimation();
+            // Attendre que la vidéo soit prête
+            await new Promise((resolve) => {
+                this.video.onloadedmetadata = () => {
+                    this.video.play();
+                    resolve();
+                };
+            });
             
-            // 5. Mettre à jour l'UI
-            this.isARActive = true;
+            // Mettre à jour l'état
+            this.isCameraActive = true;
+            this.video.style.display = 'block';
+            
+            // Mettre à jour l'interface
             this.updateUI();
-            this.showMessage('AR démarré avec succès!');
+            
+            this.hideLoading();
+            this.showMessage('✅ Caméra activée! Cliquez sur "Démarrer AR"', 'success');
+            
+            // Initialiser Three.js
+            this.initThreeJS();
             
         } catch (error) {
-            console.error('Erreur démarrage AR:', error);
-            this.showMessage('Erreur: ' + error.message, 'error');
-            this.startFallbackMode();
-        } finally {
-            this.showLoading(false);
+            console.error('❌ Erreur caméra:', error);
+            this.hideLoading();
+            
+            if (error.name === 'NotAllowedError') {
+                this.showMessage('❌ Accès à la caméra refusé. Autorisez l\'accès et réessayez.', 'error');
+            } else if (error.name === 'NotFoundError') {
+                this.showMessage('❌ Aucune caméra trouvée sur cet appareil.', 'error');
+            } else {
+                this.showMessage('❌ Erreur caméra: ' + error.message, 'error');
+            }
+            
+            // Fallback: utiliser une image statique
+            this.useImageFallback();
         }
     }
     
-    async initThreeJS() {
-        // Créer la scène
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x000000);
+    stopCamera() {
+        if (this.video.srcObject) {
+            // Arrêter tous les tracks
+            const tracks = this.video.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            this.video.srcObject = null;
+        }
         
-        // Créer la caméra
-        const width = this.canvas.clientWidth;
-        const height = this.canvas.clientHeight;
+        this.isCameraActive = false;
+        this.video.style.display = 'none';
+        this.updateUI();
+    }
+    
+    async switchCamera() {
+        // Changer entre caméra avant/arrière
+        this.currentCamera = this.currentCamera === 'user' ? 'environment' : 'user';
         
-        this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        this.camera.position.z = 5;
+        // Arrêter la caméra actuelle
+        this.stopCamera();
         
-        // Créer le renderer
-        this.renderer = new THREE.WebGLRenderer({
-            canvas: this.canvas,
-            antialias: true,
-            alpha: true
+        // Redémarrer avec la nouvelle caméra
+        setTimeout(() => this.startCamera(), 500);
+    }
+    
+    useImageFallback() {
+        console.log('Utilisation du fallback image');
+        
+        // Créer un canvas de fallback
+        const ctx = this.canvas.getContext('2d');
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Ajouter un message
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Mode démo - Caméra non disponible', this.canvas.width/2, this.canvas.height/2);
+        
+        this.showMessage('Mode démo activé (pas de caméra)', 'info');
+    }
+    
+    // ==================== THREE.JS ====================
+    initThreeJS() {
+        try {
+            console.log('🎮 Initialisation Three.js...');
+            
+            // Créer la scène
+            this.scene = new THREE.Scene();
+            
+            // Créer la caméra Three.js
+            const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
+            this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+            this.camera.position.set(0, 0, 5);
+            
+            // Créer le renderer
+            this.renderer = new THREE.WebGLRenderer({
+                canvas: this.canvas,
+                alpha: true,
+                antialias: true,
+                powerPreference: 'high-performance'
+            });
+            
+            this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            // Ajouter des lumières
+            this.addLights();
+            
+            // Créer la texture vidéo
+            this.createVideoTexture();
+            
+            console.log('✅ Three.js initialisé');
+            
+        } catch (error) {
+            console.error('❌ Erreur Three.js:', error);
+            this.showMessage('Erreur graphique: ' + error.message, 'error');
+        }
+    }
+    
+    createVideoTexture() {
+        // Créer une texture à partir de la vidéo
+        this.videoTexture = new THREE.VideoTexture(this.video);
+        this.videoTexture.minFilter = THREE.LinearFilter;
+        this.videoTexture.magFilter = THREE.LinearFilter;
+        this.videoTexture.format = THREE.RGBAFormat;
+        
+        // Créer un plan pour afficher la vidéo
+        const videoGeometry = new THREE.PlaneGeometry(16, 9);
+        const videoMaterial = new THREE.MeshBasicMaterial({
+            map: this.videoTexture,
+            transparent: true,
+            opacity: 1.0
         });
         
-        this.renderer.setSize(width, height);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        
-        // Ajouter des lumières
+        this.videoMesh = new THREE.Mesh(videoGeometry, videoMaterial);
+        this.videoMesh.position.z = -10;
+        this.scene.add(this.videoMesh);
+    }
+    
+    addLights() {
+        // Lumière ambiante
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
         
+        // Lumière directionnelle
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(5, 5, 5);
         this.scene.add(directionalLight);
+        
+        // Lumière frontale (pour éclairer les lunettes)
+        const frontLight = new THREE.PointLight(0xffffff, 0.5, 10);
+        frontLight.position.set(0, 0, 3);
+        this.scene.add(frontLight);
     }
     
-    createSimpleScene() {
-        // Ajouter un fond d'écran (optionnel)
-        const geometry = new THREE.PlaneGeometry(20, 20);
-        const material = new THREE.MeshBasicMaterial({
-            color: 0x111111,
-            side: THREE.DoubleSide
-        });
-        const plane = new THREE.Mesh(geometry, material);
-        plane.position.z = -10;
-        this.scene.add(plane);
-        
-        // Ajouter un sol
-        const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-        gridHelper.position.y = -2;
-        this.scene.add(gridHelper);
-    }
-    
-    async loadCurrentGlasses() {
-        // Supprimer l'ancien modèle
-        if (this.currentGlasses) {
-            this.scene.remove(this.currentGlasses);
-        }
-        
-        let model = null;
-        
-        // ESSAI 1: Depuis le cache
-        if (this.modelCache.has(this.currentModel)) {
-            console.log('Chargement depuis cache:', this.currentModel);
-            model = this.modelCache.get(this.currentModel).clone();
-        }
-        // ESSAI 2: Depuis R2
-        else if (this.R2_URLS[this.currentModel] && this.R2_URLS[this.currentModel] !== 'VOTRE_URL_R2_X') {
-            model = await this.loadFromR2(this.currentModel);
-        }
-        // ESSAI 3: Depuis fichiers locaux
-        else if (await this.fileExists(this.LOCAL_URLS[this.currentModel])) {
-            model = await this.loadFromLocal(this.currentModel);
-        }
-        // ESSAI 4: Fallback (généré)
-        else {
-            console.log('Utilisation du fallback pour:', this.currentModel);
-            model = this.FALLBACK_MODELS[this.currentModel].clone();
-        }
-        
-        if (model) {
-            // Configuration du modèle
-            model.scale.set(0.5, 0.5, 0.5);
-            model.position.set(0, 0, 0);
-            model.rotation.y = Math.PI / 4;
-            
-            // Ajouter à la scène
-            this.currentGlasses = model;
-            this.scene.add(model);
-            
-            // Mettre en cache si ce n'est pas déjà fait
-            if (!this.modelCache.has(this.currentModel) && !model.isFallback) {
-                this.modelCache.set(this.currentModel, model.clone());
+    // ==================== GESTION MODÈLES 3D ====================
+    async loadGlasses(modelId) {
+        try {
+            const modelInfo = this.models[modelId];
+            if (!modelInfo) {
+                throw new Error('Modèle non trouvé');
             }
             
-            console.log('Modèle chargé:', this.currentModel);
-        }
-    }
-    
-    async loadFromR2(modelId) {
-        const url = this.R2_URLS[modelId];
-        console.log('Tentative R2:', url);
-        
-        try {
-            // Méthode spéciale pour contourner les problèmes CORS
-            const model = await this.loadGLBWithProxy(url);
-            model.isFallback = false;
-            return model;
-        } catch (error) {
-            console.error('Erreur R2:', error);
-            return null;
-        }
-    }
-    
-    async loadFromLocal(modelId) {
-        const url = this.LOCAL_URLS[modelId];
-        console.log('Tentative local:', url);
-        
-        try {
-            const loader = new THREE.GLTFLoader();
-            const gltf = await new Promise((resolve, reject) => {
-                loader.load(url, resolve, undefined, reject);
-            });
+            // Vérifier le cache
+            if (this.modelCache.has(modelId)) {
+                console.log('Utilisation du cache pour modèle', modelId);
+                return this.modelCache.get(modelId).clone();
+            }
             
-            const model = gltf.scene;
-            model.isFallback = false;
-            return model;
+            // Créer le modèle 3D
+            const glasses = this.createGlasses3D(modelInfo);
+            
+            // Mettre en cache
+            this.modelCache.set(modelId, glasses.clone());
+            
+            return glasses;
             
         } catch (error) {
-            console.error('Erreur local:', error);
-            return null;
+            console.error('Erreur création modèle:', error);
+            return this.createFallbackGlasses();
         }
     }
     
-    async loadGLBWithProxy(url) {
-        // Solution de secours pour les problèmes CORS
-        return new Promise((resolve, reject) => {
-            const loader = new THREE.GLTFLoader();
-            
-            // Configurer le loader pour ignorer certaines erreurs CORS
-            loader.setCrossOrigin('anonymous');
-            
-            loader.load(
-                url,
-                (gltf) => {
-                    resolve(gltf.scene);
-                },
-                (progress) => {
-                    console.log('Progression:', progress);
-                },
-                (error) => {
-                    console.error('Erreur loader:', error);
-                    
-                    // Tentative alternative avec fetch
-                    this.loadGLBWithFetch(url)
-                        .then(resolve)
-                        .catch(reject);
-                }
-            );
-        });
-    }
-    
-    async loadGLBWithFetch(url) {
-        try {
-            // Utiliser un proxy CORS public si nécessaire
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-            
-            const response = await fetch(proxyUrl);
-            const arrayBuffer = await response.arrayBuffer();
-            
-            const loader = new THREE.GLTFLoader();
-            const gltf = await loader.parseAsync(arrayBuffer, '');
-            
-            return gltf.scene;
-        } catch (error) {
-            console.error('Erreur fetch:', error);
-            throw error;
-        }
-    }
-    
-    async fileExists(url) {
-        try {
-            const response = await fetch(url, { method: 'HEAD' });
-            return response.ok;
-        } catch {
-            return false;
-        }
-    }
-    
-    createBasicGlasses(frameColor, lensColor) {
+    createGlasses3D(modelInfo) {
         const group = new THREE.Group();
-        group.isFallback = true;
         
-        // Monture
-        const frameGeometry = new THREE.TorusGeometry(1, 0.1, 16, 100);
-        const frameMaterial = new THREE.MeshStandardMaterial({ 
-            color: frameColor,
-            metalness: 0.8,
-            roughness: 0.2
-        });
+        // Paramètres
+        const frameRadius = 0.5;
+        const bridgeWidth = 0.2;
+        const lensRadius = frameRadius * 0.9;
         
-        // Verres
-        const lensGeometry = new THREE.CircleGeometry(0.9, 32);
-        const lensMaterial = new THREE.MeshPhysicalMaterial({
-            color: lensColor,
-            transmission: 0.7,
+        // Matériaux
+        const frameMaterial = new THREE.MeshStandardMaterial({
+            color: modelInfo.color,
+            metalness: 0.9,
             roughness: 0.1,
-            thickness: 0.5,
-            transparent: true,
-            opacity: 0.6
+            emissive: new THREE.Color(modelInfo.color).multiplyScalar(0.1)
         });
         
-        const leftFrame = new THREE.Mesh(frameGeometry, frameMaterial);
-        leftFrame.position.x = -1.2;
+        const lensMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x1a5276,
+            transmission: 0.8,
+            roughness: 0.05,
+            thickness: 0.3,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
         
-        const rightFrame = new THREE.Mesh(frameGeometry, frameMaterial);
-        rightFrame.position.x = 1.2;
+        // Cadre gauche
+        const leftFrameGeometry = new THREE.TorusGeometry(frameRadius, 0.05, 16, 100);
+        const leftFrame = new THREE.Mesh(leftFrameGeometry, frameMaterial);
+        leftFrame.position.x = -frameRadius - bridgeWidth/2;
+        leftFrame.rotation.y = Math.PI / 2;
         
-        const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
-        leftLens.position.x = -1.2;
-        leftLens.position.z = 0.05;
-        
-        const rightLens = new THREE.Mesh(lensGeometry, lensMaterial);
-        rightLens.position.x = 1.2;
-        rightLens.position.z = 0.05;
+        // Cadre droit
+        const rightFrameGeometry = new THREE.TorusGeometry(frameRadius, 0.05, 16, 100);
+        const rightFrame = new THREE.Mesh(rightFrameGeometry, frameMaterial);
+        rightFrame.position.x = frameRadius + bridgeWidth/2;
+        rightFrame.rotation.y = Math.PI / 2;
         
         // Pont
-        const bridgeGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8);
+        const bridgeGeometry = new THREE.CylinderGeometry(0.03, 0.03, bridgeWidth, 8);
         const bridge = new THREE.Mesh(bridgeGeometry, frameMaterial);
         bridge.position.x = 0;
         
-        group.add(leftFrame, rightFrame, leftLens, rightLens, bridge);
+        // Verres
+        const lensGeometry = new THREE.CircleGeometry(lensRadius, 32);
+        const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
+        leftLens.position.x = -frameRadius - bridgeWidth/2;
+        leftLens.position.z = 0.02;
+        
+        const rightLens = new THREE.Mesh(lensGeometry, lensMaterial);
+        rightLens.position.x = frameRadius + bridgeWidth/2;
+        rightLens.position.z = 0.02;
+        
+        // Branches
+        const templeGeometry = new THREE.BoxGeometry(1.2, 0.03, 0.03);
+        
+        const leftTemple = new THREE.Mesh(templeGeometry, frameMaterial);
+        leftTemple.position.set(-frameRadius - bridgeWidth/2 - 0.6, 0, 0);
+        leftTemple.rotation.z = -0.3;
+        
+        const rightTemple = new THREE.Mesh(templeGeometry, frameMaterial);
+        rightTemple.position.set(frameRadius + bridgeWidth/2 + 0.6, 0, 0);
+        rightTemple.rotation.z = 0.3;
+        
+        // Assembler
+        group.add(leftFrame, rightFrame, bridge, leftLens, rightLens, leftTemple, rightTemple);
+        
+        // Appliquer l'échelle
+        group.scale.set(modelInfo.scale, modelInfo.scale, modelInfo.scale);
         
         return group;
+    }
+    
+    createFallbackGlasses() {
+        const group = new THREE.Group();
+        
+        // Lunettes simples de secours
+        const geometry = new THREE.BoxGeometry(1, 0.5, 0.05);
+        const material = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        
+        const glasses = new THREE.Mesh(geometry, material);
+        group.add(glasses);
+        
+        return group;
+    }
+    
+    // ==================== AR ====================
+    async startAR() {
+        if (!this.isCameraActive) {
+            this.showMessage('Activez d\'abord la caméra!', 'error');
+            return;
+        }
+        
+        if (!this.scene) {
+            this.showMessage('Erreur: Three.js non initialisé', 'error');
+            return;
+        }
+        
+        try {
+            this.showLoading('Démarrage AR...');
+            
+            // Charger les lunettes actuelles
+            this.currentGlasses = await this.loadGlasses(this.currentModel);
+            
+            // Positionner les lunettes devant la caméra
+            const modelInfo = this.models[this.currentModel];
+            this.currentGlasses.position.set(
+                modelInfo.position.x,
+                modelInfo.position.y,
+                modelInfo.position.z
+            );
+            
+            // Ajouter à la scène
+            this.scene.add(this.currentGlasses);
+            
+            // Démarrer l'animation
+            this.isARActive = true;
+            this.startAnimation();
+            
+            // Mettre à jour l'interface
+            this.updateUI();
+            
+            this.hideLoading();
+            this.showMessage('✨ AR activé! Les lunettes apparaissent sur le flux vidéo', 'success');
+            
+        } catch (error) {
+            console.error('❌ Erreur démarrage AR:', error);
+            this.hideLoading();
+            this.showMessage('Erreur AR: ' + error.message, 'error');
+        }
+    }
+    
+    stopAR() {
+        this.isARActive = false;
+        
+        // Retirer les lunettes de la scène
+        if (this.currentGlasses && this.scene) {
+            this.scene.remove(this.currentGlasses);
+            this.currentGlasses = null;
+        }
+        
+        // Mettre à jour l'interface
+        this.updateUI();
+        
+        this.showMessage('AR arrêté', 'info');
     }
     
     startAnimation() {
@@ -371,143 +450,212 @@ class NwadriAR {
             
             requestAnimationFrame(animate);
             
-            // Animation des lunettes
-            if (this.currentGlasses) {
-                this.currentGlasses.rotation.y += 0.01;
-                this.currentGlasses.position.y = Math.sin(Date.now() * 0.001) * 0.1;
+            // Mettre à jour la texture vidéo
+            if (this.videoTexture) {
+                this.videoTexture.needsUpdate = true;
             }
             
-            this.renderer.render(this.scene, this.camera);
+            // Animation des lunettes
+            if (this.currentGlasses) {
+                // Rotation subtile
+                this.currentGlasses.rotation.y += 0.005;
+                
+                // Effet de "flottement" léger
+                const time = Date.now() * 0.001;
+                this.currentGlasses.position.y = this.models[this.currentModel].position.y + Math.sin(time) * 0.02;
+            }
+            
+            // Rendu
+            if (this.renderer && this.scene && this.camera) {
+                this.renderer.render(this.scene, this.camera);
+            }
         };
         
         animate();
     }
     
-    startFallbackMode() {
-        console.log('Mode fallback activé');
-        this.updateStatus('Mode démo activé');
+    async switchGlasses(modelId) {
+        if (!this.isARActive) return;
         
-        // Afficher un message
-        this.showMessage('Mode démo - Vos modèles seront affichés en 3D', 'info');
-        
-        // Forcer le chargement du fallback
-        this.loadCurrentGlasses();
-    }
-    
-    stopAR() {
-        this.isARActive = false;
-        
-        // Nettoyer Three.js
-        if (this.renderer) {
-            this.renderer.dispose();
+        try {
+            // Retirer les anciennes lunettes
+            if (this.currentGlasses && this.scene) {
+                this.scene.remove(this.currentGlasses);
+            }
+            
+            // Charger les nouvelles lunettes
+            this.currentModel = modelId;
+            this.currentGlasses = await this.loadGlasses(modelId);
+            
+            // Positionner
+            const modelInfo = this.models[modelId];
+            this.currentGlasses.position.set(
+                modelInfo.position.x,
+                modelInfo.position.y,
+                modelInfo.position.z
+            );
+            
+            // Ajouter à la scène
+            this.scene.add(this.currentGlasses);
+            
+            // Effet de transition
+            this.animateGlassesSwitch();
+            
+            this.showMessage(`Lunettes changées: ${modelInfo.name}`, 'info');
+            
+        } catch (error) {
+            console.error('Erreur changement lunettes:', error);
         }
-        
-        // Réinitialiser
-        this.scene = null;
-        this.camera = null;
-        this.renderer = null;
-        this.currentGlasses = null;
-        
-        // Effacer le canvas
-        const ctx = this.canvas.getContext('2d');
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.updateUI();
-        this.showMessage('AR arrêté');
     }
     
-    // GESTION DE L'INTERFACE
+    animateGlassesSwitch() {
+        if (!this.currentGlasses) return;
+        
+        // Animation d'apparition
+        const originalScale = this.currentGlasses.scale.clone();
+        this.currentGlasses.scale.set(0.1, 0.1, 0.1);
+        
+        let progress = 0;
+        const duration = 400; // ms
+        
+        const animate = () => {
+            progress += 16.67;
+            const t = Math.min(progress / duration, 1);
+            
+            // Easing
+            const easeOut = t => t * (2 - t);
+            
+            const scale = 0.1 + (originalScale.x - 0.1) * easeOut(t);
+            this.currentGlasses.scale.set(scale, scale, scale);
+            
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    // ==================== UI ====================
     setupEventListeners() {
-        // Bouton démarrer
+        // Bouton Activer Caméra
+        document.getElementById('startCamera').addEventListener('click', () => {
+            this.startCamera();
+        });
+        
+        // Bouton Démarrer AR
         document.getElementById('startAR').addEventListener('click', () => {
             this.startAR();
         });
         
-        // Bouton arrêter
+        // Bouton Arrêter AR
         document.getElementById('stopAR').addEventListener('click', () => {
             this.stopAR();
         });
         
-        // Bouton tester modèle
-        document.getElementById('testModel').addEventListener('click', async () => {
-            this.showMessage('Test des modèles en cours...', 'info');
-            await this.testAllModels();
-            this.showMessage('Test terminé - Voir la console', 'info');
+        // Bouton Changer Caméra
+        document.getElementById('switchCamera').addEventListener('click', () => {
+            this.switchCamera();
         });
         
         // Sélection des lunettes
-        document.querySelectorAll('.glass-card').forEach(card => {
-            card.addEventListener('click', async () => {
-                const modelId = card.dataset.model;
+        document.querySelectorAll('.glass-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const modelId = item.dataset.model;
                 
-                // Mettre à jour la sélection
-                document.querySelectorAll('.glass-card').forEach(c => {
-                    c.classList.remove('active');
+                // Mettre à jour la sélection visuelle
+                document.querySelectorAll('.glass-item').forEach(el => {
+                    el.classList.remove('active');
                 });
-                card.classList.add('active');
+                item.classList.add('active');
                 
-                // Changer de modèle
-                this.currentModel = modelId;
-                
-                // Si AR actif, charger le nouveau modèle
-                if (this.isARActive) {
-                    await this.loadCurrentGlasses();
-                    this.showMessage(`Lunettes changées: Modèle ${modelId}`);
-                }
+                // Changer les lunettes
+                this.switchGlasses(modelId);
             });
         });
         
         // Redimensionnement
         window.addEventListener('resize', () => {
-            if (this.isARActive && this.camera && this.renderer) {
-                const width = this.canvas.clientWidth;
-                const height = this.canvas.clientHeight;
-                
-                this.camera.aspect = width / height;
-                this.camera.updateProjectionMatrix();
-                this.renderer.setSize(width, height);
-            }
+            this.onResize();
+        });
+        
+        // Gestion erreurs vidéo
+        this.video.addEventListener('error', (e) => {
+            console.error('Erreur vidéo:', e);
+            this.showMessage('Erreur flux vidéo', 'error');
         });
     }
     
-    updateUI() {
-        const startBtn = document.getElementById('startAR');
-        const stopBtn = document.getElementById('stopAR');
+    onResize() {
+        // Redimensionner le canvas
+        this.canvas.width = this.canvas.clientWidth;
+        this.canvas.height = this.canvas.clientHeight;
         
-        if (startBtn) startBtn.disabled = this.isARActive;
-        if (stopBtn) stopBtn.disabled = !this.isARActive;
-    }
-    
-    updateStatus(text) {
-        const status = document.getElementById('status');
-        if (status) {
-            status.innerHTML = `<i class="fas fa-info-circle"></i> ${text}`;
+        // Mettre à jour Three.js
+        if (this.camera && this.renderer) {
+            this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
         }
     }
     
-    showLoading(show) {
-        const loading = document.getElementById('loading');
-        if (loading) {
-            loading.style.display = show ? 'flex' : 'none';
+    updateUI() {
+        const startCameraBtn = document.getElementById('startCamera');
+        const startARBtn = document.getElementById('startAR');
+        const stopARBtn = document.getElementById('stopAR');
+        const switchCameraBtn = document.getElementById('switchCamera');
+        
+        // Bouton caméra
+        if (startCameraBtn) {
+            startCameraBtn.disabled = this.isCameraActive;
+        }
+        
+        // Bouton AR
+        if (startARBtn) {
+            startARBtn.disabled = !this.isCameraActive || this.isARActive;
+        }
+        
+        // Bouton arrêter
+        if (stopARBtn) {
+            stopARBtn.disabled = !this.isARActive;
+        }
+        
+        // Bouton changer caméra
+        if (switchCameraBtn) {
+            switchCameraBtn.disabled = !this.isCameraActive;
+        }
+    }
+    
+    showLoading(text) {
+        if (this.loading && this.loadingText) {
+            this.loadingText.textContent = text;
+            this.loading.style.display = 'flex';
+        }
+    }
+    
+    hideLoading() {
+        if (this.loading) {
+            this.loading.style.display = 'none';
         }
     }
     
     showMessage(text, type = 'info') {
-        // Supprimer les anciens messages
-        const oldMessages = document.querySelectorAll('.message');
-        oldMessages.forEach(msg => msg.remove());
+        // Supprimer ancien message
+        const oldMessage = document.querySelector('.message');
+        if (oldMessage) oldMessage.remove();
         
-        // Créer le nouveau message
+        // Créer nouveau message
         const message = document.createElement('div');
         message.className = `message ${type}`;
         message.innerHTML = `
-            <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                              type === 'success' ? 'check-circle' : 'info-circle'}"></i>
             ${text}
         `;
         
         document.body.appendChild(message);
         
-        // Supprimer automatiquement
+        // Auto-suppression
         setTimeout(() => {
             if (message.parentElement) {
                 message.style.animation = 'slideIn 0.3s ease reverse';
@@ -517,34 +665,75 @@ class NwadriAR {
                     }
                 }, 300);
             }
-        }, 3000);
+        }, 4000);
     }
     
-    // UTILITAIRE: Télécharger un modèle GLB de test
-    async downloadTestModel() {
-        // Créer un modèle GLB simple pour tester
-        const simpleGLB = await this.createSimpleGLB();
+    // ==================== UTILITAIRES ====================
+    async testCameraAccess() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+        } catch {
+            return false;
+        }
+    }
+    
+    getCameraInfo() {
+        return {
+            isMobile: this.isMobile,
+            cameraActive: this.isCameraActive,
+            ARActive: this.isARActive,
+            currentCamera: this.currentCamera,
+            currentModel: this.currentModel,
+            canvasSize: { width: this.canvas.width, height: this.canvas.height }
+        };
+    }
+    
+    // ==================== NETTOYAGE ====================
+    cleanup() {
+        this.stopAR();
+        this.stopCamera();
         
-        // Télécharger
-        const blob = new Blob([simpleGLB], { type: 'model/gltf-binary' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'test-glasses.glb';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // Nettoyer Three.js
+        if (this.renderer) {
+            this.renderer.dispose();
+            this.renderer = null;
+        }
         
-        this.showMessage('Modèle test téléchargé! Placez-le dans models/', 'info');
+        if (this.videoTexture) {
+            this.videoTexture.dispose();
+            this.videoTexture = null;
+        }
+        
+        // Nettoyer le cache
+        this.modelCache.clear();
+        
+        console.log('🧹 NWADRI AR nettoyé');
     }
 }
 
-// Démarrer l'application
+// ==================== DÉMARRAGE ====================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('NWADRI - Chargement de l\'application...');
-    window.nwadriApp = new NwadriAR();
+    console.log('📱 NWADRI - Chargement...');
     
-    // Pour déboguer
-    window.debugNWADRI = window.nwadriApp;
+    // Créer l'application
+    window.nwadriApp = new NwadriARCamera();
+    
+    // Pour débogage
+    console.log('💡 Pour déboguer:');
+    console.log('   - Tapez "nwadriApp.getCameraInfo()" pour les infos');
+    console.log('   - Tapez "nwadriApp.testCameraAccess()" pour tester la caméra');
+    
+    // Nettoyage à la fermeture
+    window.addEventListener('beforeunload', () => {
+        if (window.nwadriApp) {
+            window.nwadriApp.cleanup();
+        }
+    });
+    
+    // Message de bienvenue
+    setTimeout(() => {
+        console.log('🎉 NWADRI AR prêt!');
+    }, 1000);
 });
