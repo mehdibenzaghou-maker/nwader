@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nwader – Try On</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    #start {
+      position: absolute;
+      z-index: 10;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 28px;
+      background: white;
+      color: black;
+      border: none;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<button id="start">Start Camera</button>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"></script>
+
+<script>
+const startButton = document.getElementById("start");
+
+startButton.addEventListener("click", async () => {
+  startButton.style.display = "none";
+
+  const mindarThree = new window.MINDAR.FACE.MindARThree({
+    container: document.body
+  });
+
+  const { renderer, scene, camera } = mindarThree;
+
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+  scene.add(light);
+
+  const faceAnchor = mindarThree.addAnchor(168); // nose bridge anchor
+
+  const loader = new THREE.GLTFLoader();
+  loader.load("models/sunglasses.glb", (gltf) => {
+    const glasses = gltf.scene;
+    glasses.scale.set(0.01, 0.01, 0.01);
+    glasses.position.set(0, 0.03, 0.02);
+    faceAnchor.group.add(glasses);
+  });
+
+  await mindarThree.start();
+
+  renderer.setAnimationLoop(() => {
+    renderer.render(scene, camera);
+  });
+});
+</script>
+
+</body>
+</html>
 
