@@ -1,48 +1,246 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Nwader</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b0b0b;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
-    }
-    .box {
-      max-width: 320px;
-    }
-    h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-    p {
-      opacity: 0.8;
-      margin-bottom: 30px;
-    }
-    a {
-      display: inline-block;
-      padding: 15px 30px;
-      background: white;
-      color: black;
-      text-decoration: none;
-      border-radius: 30px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nwadri - Lunettes de Soleil AR</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="mindar-face.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-  <div class="box">
-    <h1>Nwader</h1>
-    <p>Try sunglasses in real time using AR</p>
-    <a href="try-on.html">Try Sunglasses 👓</a>
-  </div>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">NWADRI</a>
+            <ul class="nav-menu">
+                <li><a href="#home" class="active">Accueil</a></li>
+                <li><a href="#try-on">Essayer</a></li>
+                <li><a href="#collection">Collection</a></li>
+                <li><a href="#about">À propos</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <button class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">NWADRI</h1>
+            <p class="hero-subtitle">Lunettes de soleil en réalité augmentée</p>
+            <p class="hero-description">Essayez virtuellement nos lunettes de soleil avant d'acheter. Voir directement sur votre visage en temps réel.</p>
+            <a href="#try-on" class="btn btn-primary">
+                <i class="fas fa-camera"></i> Essayer Maintenant
+            </a>
+        </div>
+        <div class="hero-image">
+            <div class="ar-preview">
+                <img src="assets/nwadri-logo.png" alt="Nwadri AR Preview" class="preview-img">
+            </div>
+        </div>
+    </section>
+
+    <!-- AR Try-On Section -->
+    <section id="try-on" class="ar-section">
+        <div class="container">
+            <h2 class="section-title">Essayer les Lunettes en AR</h2>
+            <p class="section-subtitle">Activez votre caméra et voyez les lunettes sur votre visage</p>
+            
+            <div class="ar-container">
+                <div class="camera-controls">
+                    <button id="startAR" class="btn btn-ar">
+                        <i class="fas fa-play"></i> Démarrer AR
+                    </button>
+                    <button id="stopAR" class="btn btn-ar-secondary">
+                        <i class="fas fa-stop"></i> Arrêter AR
+                    </button>
+                    <button id="switchCamera" class="btn btn-ar">
+                        <i class="fas fa-sync-alt"></i> Changer Caméra
+                    </button>
+                </div>
+                
+                <div id="ar-container" class="ar-viewport">
+                    <video id="video" playsinline style="display: none;"></video>
+                    <canvas id="ar-canvas" class="ar-canvas"></canvas>
+                    <div id="loading" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Chargement de l'expérience AR...</p>
+                    </div>
+                </div>
+                
+                <div class="glasses-selector">
+                    <h3>Choisissez vos lunettes</h3>
+                    <div class="glasses-grid">
+                        <button class="glasses-card active" data-glasses="assets/glasses1.glb">
+                            <div class="glasses-preview" id="preview1"></div>
+                            <h4>Nova Black</h4>
+                            <p>Style classique</p>
+                        </button>
+                        <button class="glasses-card" data-glasses="assets/glasses2.glb">
+                            <div class="glasses-preview" id="preview2"></div>
+                            <h4>Solar Gold</h4>
+                            <p>Édition limitée</p>
+                        </button>
+                        <button class="glasses-card" data-glasses="assets/glasses3.glb">
+                            <div class="glasses-preview" id="preview3"></div>
+                            <h4>Ocean Blue</h4>
+                            <p>Verres polarisés</p>
+                        </button>
+                        <button class="glasses-card" data-glasses="assets/glasses4.glb">
+                            <div class="glasses-preview" id="preview4"></div>
+                            <h4>Retro Aviator</h4>
+                            <p>Style vintage</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Collection Section -->
+    <section id="collection" class="collection-section">
+        <div class="container">
+            <h2 class="section-title">Notre Collection</h2>
+            <div class="collection-grid">
+                <div class="product-card">
+                    <div class="product-3d" id="product3d-1"></div>
+                    <div class="product-info">
+                        <h3>Nova Black</h3>
+                        <p>Lunettes de soleil élégantes avec verres anti-reflets</p>
+                        <span class="price">€129</span>
+                        <button class="btn btn-small try-btn" data-glasses="assets/glasses1.glb">
+                            Essayer AR
+                        </button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-3d" id="product3d-2"></div>
+                    <div class="product-info">
+                        <h3>Solar Gold</h3>
+                        <p>Monture dorée avec verres miroir</p>
+                        <span class="price">€159</span>
+                        <button class="btn btn-small try-btn" data-glasses="assets/glasses2.glb">
+                            Essayer AR
+                        </button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-3d" id="product3d-3"></div>
+                    <div class="product-info">
+                        <h3>Ocean Blue</h3>
+                        <p>Verres bleus polarisés 100% UV protection</p>
+                        <span class="price">€179</span>
+                        <button class="btn btn-small try-btn" data-glasses="assets/glasses3.glb">
+                            Essayer AR
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2 class="section-title">À propos de Nwadri</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Révolutionnez votre façon d'acheter des lunettes</h3>
+                    <p>Avec la technologie de réalité augmentée, essayez virtuellement nos lunettes de soleil directement sur votre visage, depuis le confort de votre maison.</p>
+                    <div class="features-list">
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Essai virtuel en temps réel</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Modèles 3D haute qualité</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Suivi facial précis</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Aucun téléchargement requis</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <img src="assets/nwadri-logo.png" alt="Nwadri Technology">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact-section">
+        <div class="container">
+            <h2 class="section-title">Contactez-nous</h2>
+            <div class="contact-content">
+                <div class="contact-form">
+                    <form id="contactForm">
+                        <input type="text" placeholder="Votre nom" required>
+                        <input type="email" placeholder="Votre email" required>
+                        <textarea placeholder="Votre message" rows="5" required></textarea>
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </form>
+                </div>
+                <div class="contact-info">
+                    <h3>Informations</h3>
+                    <p><i class="fas fa-envelope"></i> contact@nwadri.com</p>
+                    <p><i class="fas fa-phone"></i> +33 1 23 45 67 89</p>
+                    <p><i class="fas fa-map-marker-alt"></i> Paris, France</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-tiktok"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">NWADRI</div>
+                <p>Révolutionnez votre expérience d'achat avec la réalité augmentée</p>
+                <div class="footer-links">
+                    <a href="#home">Accueil</a>
+                    <a href="#try-on">Essayer AR</a>
+                    <a href="#collection">Collection</a>
+                    <a href="#about">À propos</a>
+                    <a href="#contact">Contact</a>
+                </div>
+                <p class="copyright">&copy; 2024 Nwadri. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Instructions Modal -->
+    <div id="instructionsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Instructions AR</h2>
+            <ol>
+                <li>Autorisez l'accès à votre caméra</li>
+                <li>Positionnez votre visage dans le cadre</li>
+                <li>Choisissez des lunettes dans la collection</li>
+                <li>Tournez la tête pour voir sous tous les angles</li>
+                <li>Cliquez sur "Arrêter AR" quand vous avez fini</li>
+            </ol>
+            <button class="btn btn-primary start-ar-modal">Commencer l'expérience AR</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
