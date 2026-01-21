@@ -1,54 +1,42 @@
-#!/usr/bin/env python3
-"""
-Simple HTTP server for AR Glasses Try-On
-Run with: python server.py
-"""
-
 import http.server
 import socketserver
 import os
-import sys
 
-PORT = 8080
+PORT = 8000
 
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        # Serve files with proper MIME types
-        if self.path == '/':
-            self.path = '/index.html'
-        
-        # Set CORS headers
+class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET')
-        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        
-        return http.server.SimpleHTTPRequestHandler.do_GET(self)
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        super().end_headers()
+    
+    def do_GET(self):
+        # Serve index.html for all routes
+        if self.path == '/' or self.path == '':
+            self.path = '/index.html'
+        return super().do_GET()
 
 def run_server():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     
-    # Check if index.html exists
-    if not os.path.exists('index.html'):
-        print("ERROR: index.html not found!")
-        print("Make sure index.html is in the same directory as server.py")
-        sys.exit(1)
-    
-    print("\n" + "="*60)
-    print("🎓 AR Glasses Try-On Server")
+    print(f"\n{'='*60}")
+    print("🎓 PERFECT AR GLASSES TRY-ON SERVER")
     print("="*60)
     print(f"\n📁 Serving from: {os.getcwd()}")
-    print(f"🌐 Open your browser and visit: http://localhost:{PORT}")
-    print("\n📱 On mobile (same network):")
-    print("   1. Find your computer's IP address")
-    print(f"   2. Visit: http://YOUR_IP:{PORT}")
-    print("\n⚠️  Important:")
-    print("   • Use Chrome or Edge for best results")
-    print("   • Allow camera access when prompted")
-    print("   • Ensure good lighting for face detection")
-    print("\n🔄 Press Ctrl+C to stop the server")
-    print("="*60 + "\n")
+    print(f"🌐 Open in browser: http://localhost:{PORT}")
+    print("\n📱 On mobile (same WiFi):")
+    print("   Use your computer's IP address")
+    print(f"   Example: http://192.168.1.X:{PORT}")
+    print("\n🎯 Features:")
+    print("   • Real 3D glasses models")
+    print("   • Perfect face fitting")
+    print("   • Instant face tracking")
+    print("   • Multiple styles")
+    print("\n🔄 Press Ctrl+C to stop")
+    print("="*60)
     
-    with socketserver.TCPServer(("", PORT), Handler) as httpd:
+    with socketserver.TCPServer(("", PORT), CORSRequestHandler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
