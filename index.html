@@ -3,53 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Glasses Try-On</title>
+    <title>AR Glasses Try-On | Virtual Fitting Room</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>AR Glasses Try-On</h1>
-        <p class="subtitle">Look at the camera to automatically try on glasses</p>
-        
-        <div class="camera-container">
-            <video class="input-video" id="inputVideo" autoplay playsinline></video>
-            <canvas class="output-canvas" id="outputCanvas" width="1280" height="720"></canvas>
-            <div id="loading" class="loading-overlay">
-                <div class="spinner"></div>
-                <p>Loading face detection model...</p>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-glasses"></i>
+                <span>VisionAR</span>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="active"><i class="fas fa-home"></i> Home</a>
+                <a href="#"><i class="fas fa-shopping-bag"></i> Shop</a>
+                <a href="#"><i class="fas fa-question-circle"></i> Help</a>
             </div>
         </div>
-        
-        <div class="controls">
-            <button id="startCamera" class="btn btn-primary">
-                <span class="icon">📷</span> Start Camera
-            </button>
-            <button id="changeGlasses" class="btn btn-secondary">
-                <span class="icon">👓</span> Change Glasses Style
-            </button>
-            <button id="takeScreenshot" class="btn btn-secondary">
-                <span class="icon">📸</span> Take Screenshot
-            </button>
-            <div class="status" id="status">
-                Status: Waiting for camera...
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="hero-section">
+            <div class="hero-text">
+                <h1 class="hero-title">Try Glasses in <span class="highlight">Augmented Reality</span></h1>
+                <p class="hero-subtitle">See how glasses look on your face before buying. No downloads required!</p>
+                <div class="hero-features">
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Real-time face tracking</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>High-quality 3D models</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Works on all devices</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ar-container">
+                <div class="ar-view">
+                    <div class="video-wrapper">
+                        <video class="input-video" id="inputVideo" autoplay playsinline></video>
+                        <canvas class="output-canvas" id="outputCanvas" width="1280" height="720"></canvas>
+                        <div id="loading" class="loading-overlay">
+                            <div class="spinner"></div>
+                            <p>Initializing AR Experience...</p>
+                            <p class="loading-sub">This may take a moment</p>
+                        </div>
+                        <div class="face-guide" id="faceGuide">
+                            <div class="guide-circle"></div>
+                            <p>Position your face inside the circle</p>
+                        </div>
+                    </div>
+                    
+                    <div class="ar-controls">
+                        <button id="startCamera" class="control-btn primary">
+                            <i class="fas fa-video"></i>
+                            <span>Start Camera</span>
+                        </button>
+                        <button id="changeGlasses" class="control-btn secondary">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Change Glasses</span>
+                        </button>
+                        <button id="takeScreenshot" class="control-btn secondary">
+                            <i class="fas fa-camera"></i>
+                            <span>Capture</span>
+                        </button>
+                    </div>
+                    
+                    <div class="status-container">
+                        <div class="status-indicator" id="statusIndicator">
+                            <div class="status-dot"></div>
+                            <span id="statusText">Ready to start</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="instructions">
-            <h3>Instructions:</h3>
-            <ol>
-                <li>Click "Start Camera" and allow camera access</li>
-                <li>Look straight at the camera</li>
-                <li>Glasses will automatically appear on your face</li>
-                <li>Move your head - glasses will track your face</li>
-                <li>Use "Change Glasses Style" to try different frames</li>
-            </ol>
+
+        <!-- Glasses Selection -->
+        <section class="glasses-section">
+            <h2 class="section-title">Available Styles</h2>
+            <p class="section-subtitle">Click any style to try it on instantly</p>
+            
+            <div class="glasses-grid" id="glassesGrid">
+                <!-- Glasses will be loaded dynamically -->
+            </div>
+        </section>
+
+        <!-- Instructions -->
+        <section class="instructions-section">
+            <h2 class="section-title">How It Works</h2>
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <i class="fas fa-video step-icon"></i>
+                    <h3>Start Camera</h3>
+                    <p>Allow camera access when prompted. We only process video locally.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <i class="fas fa-user step-icon"></i>
+                    <h3>Face Detection</h3>
+                    <p>Look at the camera. Our AI will detect your face automatically.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <i class="fas fa-glasses step-icon"></i>
+                    <h3>Try Glasses</h3>
+                    <p>Browse different styles. Glasses will track your face movements.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <i class="fas fa-camera step-icon"></i>
+                    <h3>Save & Share</h3>
+                    <p>Capture your look and share with friends or save for later.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3><i class="fas fa-glasses"></i> VisionAR</h3>
+                <p>Experience the future of eyewear shopping with augmented reality try-on technology.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Contact Us</a>
+            </div>
+            <div class="footer-section">
+                <h3>Technology</h3>
+                <p>Powered by Three.js & MediaPipe</p>
+                <p>All processing happens locally in your browser</p>
+            </div>
         </div>
-    </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 VisionAR. All rights reserved. | Made with <i class="fas fa-heart"></i> for the AR community</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
 
     <script src="main.js"></script>
 </body>
