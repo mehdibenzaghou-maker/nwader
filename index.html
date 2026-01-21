@@ -3,162 +3,614 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Glasses Try-On | Virtual Fitting Room</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <title>AR Glasses Try-On | Like FittingBox</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #videoElement {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+        
+        #canvasOutput {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+        
+        #threeCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            z-index: 10;
+        }
+        
+        .glasses-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 10;
+            width: 250px;
+        }
+        
+        .glasses-option {
+            background: #333;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        .glasses-option:hover {
+            background: #444;
+        }
+        
+        .glasses-option.active {
+            background: #007bff;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="logo">
-                <i class="fas fa-glasses"></i>
-                <span>VisionAR</span>
-            </div>
-            <div class="nav-links">
-                <a href="#" class="active"><i class="fas fa-home"></i> Home</a>
-                <a href="#"><i class="fas fa-shopping-bag"></i> Shop</a>
-                <a href="#"><i class="fas fa-question-circle"></i> Help</a>
-            </div>
+    <div class="container">
+        <!-- Camera Feed -->
+        <video id="videoElement" autoplay playsinline></video>
+        
+        <!-- MediaPipe Face Mesh Output -->
+        <canvas id="canvasOutput"></canvas>
+        
+        <!-- Three.js Canvas for Glasses -->
+        <canvas id="threeCanvas"></canvas>
+        
+        <!-- Status Display -->
+        <div class="status" id="status">Loading face detection...</div>
+        
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading">Starting camera...</div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button id="startBtn">Start Camera</button>
+            <button id="toggle3D">Show 3D View</button>
+            <button id="screenshot">Take Photo</button>
         </div>
-    </nav>
+        
+        <!-- Glasses Selector -->
+        <div class="glasses-selector">
+            <h3>Glasses Styles</h3>
+            <div class="glasses-option active" data-model="aviator">Aviator</div>
+            <div class="glasses-option" data-model="wayfarer">Wayfarer</div>
+            <div class="glasses-option" data-model="round">Round</div>
+            <div class="glasses-option" data-model="cat-eye">Cat Eye</div>
+        </div>
+    </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="hero-section">
-            <div class="hero-text">
-                <h1 class="hero-title">Try Glasses in <span class="highlight">Augmented Reality</span></h1>
-                <p class="hero-subtitle">See how glasses look on your face before buying. No downloads required!</p>
-                <div class="hero-features">
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Real-time face tracking</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>High-quality 3D models</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Works on all devices</span>
-                    </div>
-                </div>
-            </div>
+    <!-- Import MediaPipe Face Mesh -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    
+    <!-- Import Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    
+    <!-- Main Application -->
+    <script>
+        // Main Application
+        class ARGlassesTryOn {
+            constructor() {
+                this.videoElement = document.getElementById('videoElement');
+                this.canvasOutput = document.getElementById('canvasOutput');
+                this.threeCanvas = document.getElementById('threeCanvas');
+                this.statusElement = document.getElementById('status');
+                this.loadingElement = document.getElementById('loading');
+                
+                // Three.js variables
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.glasses = null;
+                
+                // Face mesh variables
+                this.faceMesh = null;
+                this.detections = null;
+                this.faceLandmarks = null;
+                
+                // State
+                this.isCameraOn = false;
+                this.isFaceDetected = false;
+                this.currentGlassesModel = 'aviator';
+                
+                // Initialize
+                this.initThreeJS();
+                this.initFaceMesh();
+                this.setupEventListeners();
+            }
             
-            <div class="ar-container">
-                <div class="ar-view">
-                    <div class="video-wrapper">
-                        <video class="input-video" id="inputVideo" autoplay playsinline></video>
-                        <canvas class="output-canvas" id="outputCanvas" width="1280" height="720"></canvas>
-                        <div id="loading" class="loading-overlay">
-                            <div class="spinner"></div>
-                            <p>Initializing AR Experience...</p>
-                            <p class="loading-sub">This may take a moment</p>
-                        </div>
-                        <div class="face-guide" id="faceGuide">
-                            <div class="guide-circle"></div>
-                            <p>Position your face inside the circle</p>
-                        </div>
-                    </div>
-                    
-                    <div class="ar-controls">
-                        <button id="startCamera" class="control-btn primary">
-                            <i class="fas fa-video"></i>
-                            <span>Start Camera</span>
-                        </button>
-                        <button id="changeGlasses" class="control-btn secondary">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Change Glasses</span>
-                        </button>
-                        <button id="takeScreenshot" class="control-btn secondary">
-                            <i class="fas fa-camera"></i>
-                            <span>Capture</span>
-                        </button>
-                    </div>
-                    
-                    <div class="status-container">
-                        <div class="status-indicator" id="statusIndicator">
-                            <div class="status-dot"></div>
-                            <span id="statusText">Ready to start</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Glasses Selection -->
-        <section class="glasses-section">
-            <h2 class="section-title">Available Styles</h2>
-            <p class="section-subtitle">Click any style to try it on instantly</p>
+            // Initialize Three.js
+            initThreeJS() {
+                // Create scene
+                this.scene = new THREE.Scene();
+                
+                // Create camera
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.z = 5;
+                
+                // Create renderer
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: this.threeCanvas,
+                    alpha: true,
+                    antialias: true
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x000000, 0);
+                
+                // Add lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+                directionalLight.position.set(0, 1, 1);
+                this.scene.add(directionalLight);
+                
+                // Create a simple glasses model initially
+                this.createDefaultGlasses();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                // Start animation loop
+                this.animate();
+            }
             
-            <div class="glasses-grid" id="glassesGrid">
-                <!-- Glasses will be loaded dynamically -->
-            </div>
-        </section>
-
-        <!-- Instructions -->
-        <section class="instructions-section">
-            <h2 class="section-title">How It Works</h2>
-            <div class="steps-container">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <i class="fas fa-video step-icon"></i>
-                    <h3>Start Camera</h3>
-                    <p>Allow camera access when prompted. We only process video locally.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <i class="fas fa-user step-icon"></i>
-                    <h3>Face Detection</h3>
-                    <p>Look at the camera. Our AI will detect your face automatically.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <i class="fas fa-glasses step-icon"></i>
-                    <h3>Try Glasses</h3>
-                    <p>Browse different styles. Glasses will track your face movements.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <i class="fas fa-camera step-icon"></i>
-                    <h3>Save & Share</h3>
-                    <p>Capture your look and share with friends or save for later.</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3><i class="fas fa-glasses"></i> VisionAR</h3>
-                <p>Experience the future of eyewear shopping with augmented reality try-on technology.</p>
-            </div>
-            <div class="footer-section">
-                <h3>Quick Links</h3>
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Contact Us</a>
-            </div>
-            <div class="footer-section">
-                <h3>Technology</h3>
-                <p>Powered by Three.js & MediaPipe</p>
-                <p>All processing happens locally in your browser</p>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; 2024 VisionAR. All rights reserved. | Made with <i class="fas fa-heart"></i> for the AR community</p>
-        </div>
-    </footer>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
-
-    <script src="main.js"></script>
+            // Create default glasses (fallback)
+            createDefaultGlasses() {
+                // Remove existing glasses
+                if (this.glasses) {
+                    this.scene.remove(this.glasses);
+                }
+                
+                // Create glasses group
+                this.glasses = new THREE.Group();
+                
+                // Frame (main bar)
+                const frameGeometry = new THREE.BoxGeometry(1.6, 0.08, 0.05);
+                const frameMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x333333,
+                    metalness: 0.8,
+                    roughness: 0.2
+                });
+                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+                this.glasses.add(frame);
+                
+                // Left lens
+                const lensGeometry = new THREE.CircleGeometry(0.4, 32);
+                const lensMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0xaaaaaa,
+                    transmission: 0.9,
+                    transparent: true,
+                    opacity: 0.3,
+                    roughness: 0.1,
+                    thickness: 0.5
+                });
+                const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
+                leftLens.position.x = -0.6;
+                leftLens.rotation.y = Math.PI;
+                this.glasses.add(leftLens);
+                
+                // Right lens
+                const rightLens = leftLens.clone();
+                rightLens.position.x = 0.6;
+                this.glasses.add(rightLens);
+                
+                // Left temple
+                const templeGeometry = new THREE.BoxGeometry(0.06, 0.06, 0.8);
+                const leftTemple = new THREE.Mesh(templeGeometry, frameMaterial);
+                leftTemple.position.set(-0.88, 0, -0.4);
+                leftTemple.rotation.y = 0.3;
+                this.glasses.add(leftTemple);
+                
+                // Right temple
+                const rightTemple = leftTemple.clone();
+                rightTemple.position.set(0.88, 0, -0.4);
+                rightTemple.rotation.y = -0.3;
+                this.glasses.add(rightTemple);
+                
+                this.scene.add(this.glasses);
+                this.glasses.visible = false;
+            }
+            
+            // Initialize Face Mesh
+            initFaceMesh() {
+                this.faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                    }
+                });
+                
+                this.faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                this.faceMesh.onResults((results) => {
+                    this.processFaceResults(results);
+                });
+                
+                this.updateStatus('Face detection model loaded');
+            }
+            
+            // Process face detection results
+            processFaceResults(results) {
+                const ctx = this.canvasOutput.getContext('2d');
+                
+                // Set canvas dimensions
+                this.canvasOutput.width = this.videoElement.videoWidth;
+                this.canvasOutput.height = this.videoElement.videoHeight;
+                
+                // Clear canvas
+                ctx.save();
+                ctx.clearRect(0, 0, this.canvasOutput.width, this.canvasOutput.height);
+                
+                // Draw video frame (mirrored)
+                ctx.scale(-1, 1);
+                ctx.drawImage(this.videoElement, -this.canvasOutput.width, 0, this.canvasOutput.width, this.canvasOutput.height);
+                ctx.restore();
+                
+                if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                    this.faceLandmarks = results.multiFaceLandmarks[0];
+                    
+                    if (!this.isFaceDetected) {
+                        this.isFaceDetected = true;
+                        this.updateStatus('Face detected!');
+                        this.loadingElement.style.display = 'none';
+                    }
+                    
+                    // Update glasses position
+                    this.updateGlassesPosition();
+                    
+                    // Draw face landmarks (optional, for debugging)
+                    this.drawFaceLandmarks(ctx, this.faceLandmarks);
+                } else {
+                    this.isFaceDetected = false;
+                    if (this.glasses) {
+                        this.glasses.visible = false;
+                    }
+                    this.updateStatus('Looking for face...');
+                }
+            }
+            
+            // Update glasses position based on face landmarks
+            updateGlassesPosition() {
+                if (!this.faceLandmarks || !this.glasses) return;
+                
+                // Get key face points for glasses placement
+                // MediaPipe Face Mesh landmark indices:
+                const leftEyeOuter = this.faceLandmarks[33];   // Left eye outer corner
+                const rightEyeOuter = this.faceLandmarks[263]; // Right eye outer corner
+                const noseTip = this.faceLandmarks[1];        // Nose tip
+                const forehead = this.faceLandmarks[10];      // Forehead center
+                
+                // Calculate position between eyes
+                const eyeCenterX = (leftEyeOuter.x + rightEyeOuter.x) / 2;
+                const eyeCenterY = (leftEyeOuter.y + rightEyeOuter.y) / 2;
+                
+                // Calculate eye distance for scaling
+                const eyeDistance = Math.sqrt(
+                    Math.pow(rightEyeOuter.x - leftEyeOuter.x, 2) + 
+                    Math.pow(rightEyeOuter.y - leftEyeOuter.y, 2)
+                );
+                
+                // Convert to screen coordinates
+                const screenX = (eyeCenterX - 0.5) * 2; // Convert to -1 to 1 range
+                const screenY = -(eyeCenterY - 0.5) * 2; // Invert Y axis
+                
+                // Calculate scale based on eye distance
+                const scale = eyeDistance * 6;
+                
+                // Calculate head rotation (simplified)
+                const headRotation = Math.atan2(
+                    rightEyeOuter.y - leftEyeOuter.y,
+                    rightEyeOuter.x - leftEyeOuter.x
+                );
+                
+                // Update glasses
+                this.glasses.visible = true;
+                this.glasses.position.x = screenX * 3;
+                this.glasses.position.y = screenY * 2;
+                this.glasses.position.z = 0;
+                this.glasses.scale.set(scale, scale, scale);
+                this.glasses.rotation.z = -headRotation;
+                
+                // Adjust based on head tilt
+                const noseToForehead = Math.atan2(
+                    noseTip.y - forehead.y,
+                    noseTip.x - forehead.x
+                );
+                this.glasses.rotation.x = (noseToForehead - Math.PI/2) * 0.5;
+            }
+            
+            // Draw face landmarks (for debugging)
+            drawFaceLandmarks(ctx, landmarks) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.fillStyle = '#00ff00';
+                
+                // Draw key points
+                const keyPoints = [33, 133, 362, 263, 1, 168, 94, 322];
+                keyPoints.forEach(index => {
+                    const point = landmarks[index];
+                    ctx.beginPath();
+                    ctx.arc(
+                        (1 - point.x) * this.canvasOutput.width, // Mirror X
+                        point.y * this.canvasOutput.height,
+                        3, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                });
+            }
+            
+            // Start camera
+            async startCamera() {
+                try {
+                    this.updateStatus('Starting camera...');
+                    this.loadingElement.textContent = 'Starting camera...';
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user',
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false
+                    });
+                    
+                    this.videoElement.srcObject = stream;
+                    this.isCameraOn = true;
+                    
+                    // Start face detection
+                    const camera = new Camera(this.videoElement, {
+                        onFrame: async () => {
+                            await this.faceMesh.send({ image: this.videoElement });
+                        },
+                        width: 1280,
+                        height: 720
+                    });
+                    
+                    camera.start();
+                    
+                    this.updateStatus('Camera started - Looking for face');
+                    this.loadingElement.textContent = 'Looking for face...';
+                    
+                    // Update button text
+                    document.getElementById('startBtn').textContent = 'Stop Camera';
+                    
+                } catch (error) {
+                    console.error('Camera error:', error);
+                    this.updateStatus('Camera error: ' + error.message);
+                    this.loadingElement.textContent = 'Camera error. Please refresh and allow camera access.';
+                }
+            }
+            
+            // Stop camera
+            stopCamera() {
+                if (this.videoElement.srcObject) {
+                    const tracks = this.videoElement.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
+                    this.videoElement.srcObject = null;
+                }
+                
+                this.isCameraOn = false;
+                this.isFaceDetected = false;
+                
+                if (this.glasses) {
+                    this.glasses.visible = false;
+                }
+                
+                this.updateStatus('Camera stopped');
+                this.loadingElement.style.display = 'block';
+                this.loadingElement.textContent = 'Camera stopped';
+                
+                document.getElementById('startBtn').textContent = 'Start Camera';
+            }
+            
+            // Setup event listeners
+            setupEventListeners() {
+                // Start/Stop camera button
+                document.getElementById('startBtn').addEventListener('click', () => {
+                    if (!this.isCameraOn) {
+                        this.startCamera();
+                    } else {
+                        this.stopCamera();
+                    }
+                });
+                
+                // Toggle 3D view
+                document.getElementById('toggle3D').addEventListener('click', () => {
+                    this.threeCanvas.style.display = this.threeCanvas.style.display === 'none' ? 'block' : 'none';
+                });
+                
+                // Screenshot
+                document.getElementById('screenshot').addEventListener('click', () => {
+                    this.takeScreenshot();
+                });
+                
+                // Glasses selection
+                document.querySelectorAll('.glasses-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        const model = e.target.dataset.model;
+                        this.selectGlasses(model);
+                        
+                        // Update active state
+                        document.querySelectorAll('.glasses-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        e.target.classList.add('active');
+                    });
+                });
+            }
+            
+            // Select glasses model
+            selectGlasses(model) {
+                this.currentGlassesModel = model;
+                this.updateStatus(`Selected: ${model} glasses`);
+                
+                // For now, just change the color of default glasses
+                // In production, you would load different 3D models here
+                if (this.glasses) {
+                    const frame = this.glasses.children[0];
+                    const lensMaterial = this.glasses.children[1].material;
+                    
+                    // Change color based on model
+                    const colors = {
+                        'aviator': { frame: 0xFFD700, lens: 0x87CEEB }, // Gold frame, blue lens
+                        'wayfarer': { frame: 0x2C3E50, lens: 0xBDC3C7 }, // Dark frame, gray lens
+                        'round': { frame: 0x8B4513, lens: 0xD7CCC8 }, // Brown frame, light lens
+                        'cat-eye': { frame: 0xE84393, lens: 0xFD79A8 } // Pink frame, pink lens
+                    };
+                    
+                    if (colors[model]) {
+                        frame.material.color.setHex(colors[model].frame);
+                        lensMaterial.color.setHex(colors[model].lens);
+                    }
+                }
+            }
+            
+            // Take screenshot
+            takeScreenshot() {
+                if (!this.isFaceDetected) {
+                    alert('Please start camera and wait for face detection first!');
+                    return;
+                }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = this.videoElement.videoWidth;
+                canvas.height = this.videoElement.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw video frame
+                ctx.save();
+                ctx.scale(-1, 1);
+                ctx.drawImage(this.videoElement, -canvas.width, 0, canvas.width, canvas.height);
+                ctx.restore();
+                
+                // Draw glasses (from Three.js render)
+                const glassesCanvas = this.renderer.domElement;
+                ctx.drawImage(glassesCanvas, 0, 0, canvas.width, canvas.height);
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.download = `glasses-tryon-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                this.updateStatus('Screenshot saved!');
+            }
+            
+            // Update status display
+            updateStatus(message) {
+                this.statusElement.textContent = message;
+                console.log('Status:', message);
+            }
+            
+            // Animation loop
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            }
+        }
+        
+        // Initialize application when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            const app = new ARGlassesTryOn();
+            window.app = app; // Make available in console for debugging
+            
+            // Auto-start camera (optional)
+            // setTimeout(() => app.startCamera(), 1000);
+        });
+    </script>
 </body>
 </html>
