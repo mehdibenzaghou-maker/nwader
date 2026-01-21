@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Glasses Try-On | Working Version</title>
+    <title>AR Glasses Try-On | Click Start Camera</title>
     <style>
-        /* RESET */
+        /* SUPER SIMPLE STYLES */
         * {
             margin: 0;
             padding: 0;
@@ -14,48 +14,45 @@
 
         body {
             font-family: Arial, sans-serif;
-            background: #000;
+            background: #1a1a1a;
             color: white;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* MAIN CONTAINER */
-        .main-container {
-            display: flex;
-            height: 100vh;
+        /* HEADER */
+        .header {
+            background: #2d2d2d;
             padding: 20px;
-            gap: 20px;
+            text-align: center;
+            border-bottom: 3px solid #4CAF50;
         }
 
-        /* LEFT PANEL - CAMERA */
-        .camera-panel {
-            flex: 1;
+        .header h1 {
+            color: #4CAF50;
+            font-size: 28px;
+        }
+
+        /* MAIN LAYOUT - CLEAR SECTIONS */
+        .main-layout {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        /* LEFT SIDE: CAMERA VIEW (70%) */
+        .camera-side {
+            flex: 7;
+            background: black;
+            position: relative;
             display: flex;
             flex-direction: column;
-            background: #111;
-            border-radius: 20px;
-            overflow: hidden;
         }
 
-        .camera-header {
-            padding: 20px;
-            background: #222;
-            border-bottom: 1px solid #333;
-        }
-
-        .camera-header h1 {
-            font-size: 24px;
-            color: #4CAF50;
-        }
-
+        /* CAMERA VIEW ITSELF - BIG AND CENTERED */
         .camera-view {
             flex: 1;
             position: relative;
             background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         #videoElement {
@@ -86,63 +83,17 @@
             z-index: 3;
         }
 
-        .camera-controls {
-            padding: 20px;
-            background: #222;
-            border-top: 1px solid #333;
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 180px;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .btn:hover {
-            background: #45a049;
-            transform: scale(1.05);
-        }
-
-        .btn-red {
-            background: #f44336;
-        }
-
-        .btn-red:hover {
-            background: #d32f2f;
-        }
-
-        .btn-blue {
-            background: #2196F3;
-        }
-
-        .btn-blue:hover {
-            background: #1976D2;
-        }
-
+        /* LOADING MESSAGE */
         .loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0,0,0,0.9);
             padding: 30px;
             border-radius: 10px;
+            z-index: 10;
         }
 
         .spinner {
@@ -159,6 +110,7 @@
             to { transform: rotate(360deg); }
         }
 
+        /* FACE GUIDE */
         .face-guide {
             position: absolute;
             top: 50%;
@@ -170,35 +122,103 @@
         }
 
         .guide-circle {
-            width: 200px;
-            height: 200px;
-            border: 3px dashed #4CAF50;
+            width: 250px;
+            height: 250px;
+            border: 3px solid #4CAF50;
             border-radius: 50%;
             margin-bottom: 15px;
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
         }
 
-        /* RIGHT PANEL - CONTROLS */
-        .controls-panel {
-            width: 350px;
+        /* RIGHT SIDE: CONTROLS (30%) */
+        .controls-side {
+            flex: 3;
+            background: #2d2d2d;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 20px;
+            border-left: 3px solid #333;
         }
 
-        .status-card {
-            background: #111;
+        /* BIG CAMERA BUTTONS - CAN'T MISS THEM */
+        .camera-controls {
+            background: #333;
+            padding: 25px;
             border-radius: 15px;
-            padding: 20px;
-            border: 2px solid #333;
+            text-align: center;
         }
 
-        .status-card h2 {
+        .camera-controls h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* BIG GREEN BUTTON - CAN'T MISS IT */
+        .big-btn {
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+
+        #startBtn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        #startBtn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        #stopBtn {
+            background: #f44336;
+            color: white;
+        }
+
+        #stopBtn:hover {
+            background: #d32f2f;
+            transform: scale(1.05);
+        }
+
+        #screenshotBtn {
+            background: #2196F3;
+            color: white;
+        }
+
+        #screenshotBtn:hover {
+            background: #1976D2;
+            transform: scale(1.05);
+        }
+
+        /* STATUS BOX */
+        .status-box {
+            background: #333;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .status-box h2 {
             color: #4CAF50;
             margin-bottom: 15px;
             font-size: 20px;
@@ -207,13 +227,16 @@
         .status-indicator {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 15px;
+            padding: 15px;
+            background: #444;
+            border-radius: 10px;
+            font-size: 18px;
         }
 
         .status-dot {
-            width: 12px;
-            height: 12px;
+            width: 15px;
+            height: 15px;
             border-radius: 50%;
             background: #f44336;
         }
@@ -222,19 +245,15 @@
         .status-dot.blue { background: #2196F3; }
         .status-dot.yellow { background: #FFC107; }
 
-        #statusText {
-            font-size: 16px;
-        }
-
-        .glasses-card {
-            background: #111;
-            border-radius: 15px;
+        /* GLASSES SELECTION */
+        .glasses-box {
+            background: #333;
             padding: 20px;
-            border: 2px solid #333;
+            border-radius: 15px;
             flex: 1;
         }
 
-        .glasses-card h2 {
+        .glasses-box h2 {
             color: #4CAF50;
             margin-bottom: 20px;
             font-size: 20px;
@@ -247,10 +266,10 @@
         }
 
         .glass-btn {
-            background: #222;
-            border: 2px solid #333;
+            background: #444;
+            border: 2px solid #555;
             border-radius: 10px;
-            padding: 15px;
+            padding: 20px;
             color: white;
             cursor: pointer;
             text-align: center;
@@ -258,7 +277,7 @@
         }
 
         .glass-btn:hover {
-            background: #333;
+            background: #555;
             border-color: #4CAF50;
         }
 
@@ -269,10 +288,10 @@
 
         .glass-icon {
             font-size: 24px;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
 
-        /* TOAST */
+        /* TOAST NOTIFICATION */
         .toast {
             position: fixed;
             bottom: 30px;
@@ -280,11 +299,13 @@
             transform: translateX(-50%);
             background: #333;
             color: white;
-            padding: 15px 30px;
+            padding: 20px 40px;
             border-radius: 10px;
             z-index: 1000;
             opacity: 0;
             transition: opacity 0.3s;
+            font-size: 18px;
+            border: 2px solid #4CAF50;
         }
 
         .toast.show {
@@ -293,56 +314,69 @@
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <!-- LEFT: CAMERA PANEL -->
-        <div class="camera-panel">
-            <div class="camera-header">
-                <h1>AR Glasses Try-On</h1>
-            </div>
-            
+    <!-- HEADER -->
+    <div class="header">
+        <h1>🎓 AR GLASSES TRY-ON</h1>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div class="main-layout">
+        <!-- LEFT: CAMERA (70% OF SCREEN) -->
+        <div class="camera-side">
             <div class="camera-view">
+                <!-- Video feed will appear here -->
                 <video id="videoElement" autoplay playsinline></video>
                 <canvas id="canvasOutput"></canvas>
                 <canvas id="threeCanvas"></canvas>
                 
+                <!-- Loading message -->
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    <p>Initializing AR Glasses...</p>
-                    <p style="font-size: 14px; margin-top: 10px; color: #888;">Click "Start Camera" to begin</p>
+                    <p style="font-size: 18px; margin-bottom: 10px;">AR Glasses Ready!</p>
+                    <p style="color: #4CAF50; font-size: 22px; font-weight: bold;">
+                        👉 Click "START CAMERA" on the right 👈
+                    </p>
                 </div>
                 
+                <!-- Face guide -->
                 <div class="face-guide" id="faceGuide">
                     <div class="guide-circle"></div>
-                    <p>Position your face inside the circle</p>
+                    <p style="font-size: 18px;">Position your face inside the circle</p>
                 </div>
-            </div>
-            
-            <div class="camera-controls">
-                <button id="startBtn" class="btn">
-                    🎥 Start Camera
-                </button>
-                <button id="screenshotBtn" class="btn btn-blue">
-                    📸 Take Screenshot
-                </button>
-                <button id="stopBtn" class="btn btn-red">
-                    ⏹️ Stop Camera
-                </button>
             </div>
         </div>
 
-        <!-- RIGHT: CONTROLS PANEL -->
-        <div class="controls-panel">
-            <div class="status-card">
-                <h2>Status</h2>
+        <!-- RIGHT: CONTROLS (30% OF SCREEN) -->
+        <div class="controls-side">
+            <!-- CAMERA BUTTONS - BIG AND CLEAR -->
+            <div class="camera-controls">
+                <h2>📷 CAMERA CONTROLS</h2>
+                <div class="buttons">
+                    <button id="startBtn" class="big-btn">
+                        🎥 START CAMERA
+                    </button>
+                    <button id="stopBtn" class="big-btn">
+                        ⏹️ STOP CAMERA
+                    </button>
+                    <button id="screenshotBtn" class="big-btn">
+                        📸 TAKE SCREENSHOT
+                    </button>
+                </div>
+            </div>
+
+            <!-- STATUS -->
+            <div class="status-box">
+                <h2>📊 STATUS</h2>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
                     <span id="statusText">Ready to start</span>
                 </div>
             </div>
-            
-            <div class="glasses-card">
-                <h2>Glasses Styles</h2>
-                <div class="glasses-grid" id="glassesGrid">
+
+            <!-- GLASSES SELECTION -->
+            <div class="glasses-box">
+                <h2>👓 GLASSES STYLES</h2>
+                <div class="glasses-grid">
                     <div class="glass-btn active" data-model="aviator">
                         <div class="glass-icon">🕶️</div>
                         <div>Aviator</div>
@@ -374,85 +408,83 @@
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
-    <!-- Main Application Script -->
+    <!-- MAIN APPLICATION -->
     <script>
-        // SIMPLE WORKING VERSION
-        class SimpleARGlasses {
-            constructor() {
-                // Get elements
-                this.video = document.getElementById('videoElement');
-                this.canvasOutput = document.getElementById('canvasOutput');
-                this.threeCanvas = document.getElementById('threeCanvas');
-                this.startBtn = document.getElementById('startBtn');
-                this.stopBtn = document.getElementById('stopBtn');
-                this.screenshotBtn = document.getElementById('screenshotBtn');
-                this.loading = document.getElementById('loading');
-                this.faceGuide = document.getElementById('faceGuide');
-                this.statusText = document.getElementById('statusText');
-                this.statusDot = document.getElementById('statusDot');
-                this.toast = document.getElementById('toast');
-                this.glassesBtns = document.querySelectorAll('.glass-btn');
-                
-                // State
-                this.isCameraOn = false;
-                this.isFaceDetected = false;
-                this.glasses = null;
-                this.currentModel = 'aviator';
-                
-                // Initialize
-                this.initThreeJS();
-                this.setupEventListeners();
-                
-                // Create default glasses
-                this.createGlasses();
-                
-                this.showToast('AR Glasses Ready! Click "Start Camera" to begin.');
-                this.updateStatus('Ready to start', 'yellow');
-            }
+        // SIMPLE WORKING AR GLASSES
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Page loaded - initializing AR Glasses...");
             
-            initThreeJS() {
+            // Get ALL elements
+            const video = document.getElementById('videoElement');
+            const canvasOutput = document.getElementById('canvasOutput');
+            const threeCanvas = document.getElementById('threeCanvas');
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const screenshotBtn = document.getElementById('screenshotBtn');
+            const loading = document.getElementById('loading');
+            const faceGuide = document.getElementById('faceGuide');
+            const statusText = document.getElementById('statusText');
+            const statusDot = document.getElementById('statusDot');
+            const toast = document.getElementById('toast');
+            const glassBtns = document.querySelectorAll('.glass-btn');
+            
+            // State
+            let isCameraOn = false;
+            let isFaceDetected = false;
+            let currentModel = 'aviator';
+            
+            // Three.js variables
+            let scene, camera, renderer, glasses;
+            
+            // Initialize Three.js
+            function initThreeJS() {
+                console.log("Initializing Three.js...");
+                
                 // Create scene
-                this.scene = new THREE.Scene();
+                scene = new THREE.Scene();
                 
                 // Create camera
-                this.camera = new THREE.PerspectiveCamera(
-                    60, 
-                    window.innerWidth / window.innerHeight, 
-                    0.1, 
-                    1000
-                );
-                this.camera.position.z = 5;
+                camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
                 
                 // Create renderer
-                this.renderer = new THREE.WebGLRenderer({
-                    canvas: this.threeCanvas,
+                renderer = new THREE.WebGLRenderer({
+                    canvas: threeCanvas,
                     alpha: true,
                     antialias: true
                 });
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setSize(window.innerWidth, window.innerHeight);
                 
                 // Add lighting
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-                this.scene.add(ambientLight);
+                scene.add(ambientLight);
                 
                 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
                 directionalLight.position.set(5, 5, 5);
-                this.scene.add(directionalLight);
+                scene.add(directionalLight);
                 
-                // Start animation
-                this.animate();
+                // Create initial glasses
+                createGlasses();
+                
+                // Start animation loop
+                animate();
+                
+                console.log("Three.js initialized");
             }
             
-            createGlasses() {
+            // Create glasses
+            function createGlasses() {
+                console.log("Creating glasses...");
+                
                 // Remove existing glasses
-                if (this.glasses) {
-                    this.scene.remove(this.glasses);
+                if (glasses) {
+                    scene.remove(glasses);
                 }
                 
-                // Create new glasses based on selected model
-                this.glasses = new THREE.Group();
+                // Create glasses group
+                glasses = new THREE.Group();
                 
-                // Different styles
+                // Define styles
                 const styles = {
                     aviator: { frameColor: 0xFFD700, lensColor: 0x87CEEB, scale: 0.08 },
                     wayfarer: { frameColor: 0x333333, lensColor: 0xCCCCCC, scale: 0.1 },
@@ -460,9 +492,9 @@
                     reading: { frameColor: 0x795548, lensColor: 0xF5F5F5, scale: 0.11 }
                 };
                 
-                const style = styles[this.currentModel] || styles.aviator;
+                const style = styles[currentModel] || styles.aviator;
                 
-                // Create glasses frame
+                // Create frame
                 const frameGeometry = new THREE.BoxGeometry(2, 0.15, 0.3);
                 const frameMaterial = new THREE.MeshStandardMaterial({ 
                     color: style.frameColor,
@@ -470,7 +502,7 @@
                     roughness: 0.1
                 });
                 const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-                this.glasses.add(frame);
+                glasses.add(frame);
                 
                 // Create lenses
                 const lensGeometry = new THREE.CircleGeometry(0.7, 32);
@@ -485,75 +517,54 @@
                 const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
                 leftLens.position.x = -0.9;
                 leftLens.rotation.y = Math.PI;
-                this.glasses.add(leftLens);
+                glasses.add(leftLens);
                 
                 const rightLens = leftLens.clone();
                 rightLens.position.x = 0.9;
-                this.glasses.add(rightLens);
+                glasses.add(rightLens);
                 
-                // Scale based on model
-                this.glasses.scale.setScalar(style.scale);
+                // Scale and add to scene
+                glasses.scale.setScalar(style.scale);
+                scene.add(glasses);
+                glasses.visible = false;
                 
-                // Add to scene
-                this.scene.add(this.glasses);
-                this.glasses.visible = false;
-                
-                this.showToast(`${this.currentModel} glasses loaded`);
+                console.log(`${currentModel} glasses created`);
+                showToast(`${currentModel} glasses loaded`);
             }
             
-            setupEventListeners() {
-                // Start Camera Button
-                this.startBtn.addEventListener('click', () => this.startCamera());
+            // Initialize Face Mesh
+            let faceMesh;
+            function initFaceMesh() {
+                console.log("Initializing Face Mesh...");
                 
-                // Stop Camera Button
-                this.stopBtn.addEventListener('click', () => this.stopCamera());
-                
-                // Screenshot Button
-                this.screenshotBtn.addEventListener('click', () => this.takeScreenshot());
-                
-                // Glasses Selection
-                this.glassesBtns.forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        this.glassesBtns.forEach(b => b.classList.remove('active'));
-                        e.target.closest('.glass-btn').classList.add('active');
-                        this.currentModel = e.target.closest('.glass-btn').dataset.model;
-                        this.createGlasses();
-                    });
+                faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                    }
                 });
                 
-                // Initialize Face Mesh
-                this.initFaceMesh();
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                faceMesh.onResults(function(results) {
+                    processFaceResults(results);
+                });
+                
+                console.log("Face Mesh initialized");
             }
             
-            async initFaceMesh() {
+            // Start Camera - THIS IS THE MAIN FUNCTION
+            async function startCamera() {
+                console.log("Start Camera button clicked!");
+                
                 try {
-                    this.faceMesh = new FaceMesh({
-                        locateFile: (file) => {
-                            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-                        }
-                    });
+                    updateStatus('Starting camera...', 'yellow');
+                    loading.style.display = 'block';
                     
-                    this.faceMesh.setOptions({
-                        maxNumFaces: 1,
-                        minDetectionConfidence: 0.5,
-                        minTrackingConfidence: 0.5
-                    });
-                    
-                    this.faceMesh.onResults((results) => {
-                        this.processFaceResults(results);
-                    });
-                    
-                } catch (error) {
-                    console.error('Face Mesh error:', error);
-                }
-            }
-            
-            async startCamera() {
-                try {
-                    this.updateStatus('Starting camera...', 'yellow');
-                    this.loading.style.display = 'block';
-                    
-                    // Request camera
+                    // Request camera access
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: {
                             width: { ideal: 1280 },
@@ -562,104 +573,112 @@
                         }
                     });
                     
-                    this.video.srcObject = stream;
-                    this.isCameraOn = true;
+                    // Set video source
+                    video.srcObject = stream;
+                    isCameraOn = true;
                     
                     // Start face detection
-                    const camera = new Camera(this.video, {
+                    const cameraInstance = new Camera(video, {
                         onFrame: async () => {
-                            if (this.faceMesh) {
-                                await this.faceMesh.send({ image: this.video });
+                            if (faceMesh) {
+                                await faceMesh.send({ image: video });
                             }
                         },
                         width: 1280,
                         height: 720
                     });
                     
-                    camera.start();
+                    cameraInstance.start();
                     
-                    this.updateStatus('Camera on - Looking for face', 'blue');
-                    this.showToast('Camera started! Look at the camera.');
-                    this.faceGuide.style.display = 'block';
-                    this.loading.style.display = 'none';
+                    // Update UI
+                    updateStatus('Camera on - Looking for face', 'blue');
+                    showToast('Camera started! Look at the camera.');
+                    faceGuide.style.display = 'block';
+                    loading.style.display = 'none';
+                    
+                    console.log("Camera started successfully");
                     
                 } catch (error) {
-                    console.error('Camera error:', error);
-                    this.updateStatus('Camera error', 'red');
-                    this.showToast('Camera error: ' + error.message);
-                    this.loading.style.display = 'none';
+                    console.error("Camera error:", error);
+                    updateStatus('Camera error', 'red');
+                    showToast('Error: ' + error.message);
+                    loading.style.display = 'none';
                 }
             }
             
-            stopCamera() {
-                if (this.video.srcObject) {
-                    const tracks = this.video.srcObject.getTracks();
+            // Stop Camera
+            function stopCamera() {
+                console.log("Stop Camera button clicked");
+                
+                if (video.srcObject) {
+                    const tracks = video.srcObject.getTracks();
                     tracks.forEach(track => track.stop());
-                    this.video.srcObject = null;
+                    video.srcObject = null;
                 }
                 
-                this.isCameraOn = false;
-                this.isFaceDetected = false;
+                isCameraOn = false;
+                isFaceDetected = false;
                 
-                if (this.glasses) {
-                    this.glasses.visible = false;
+                if (glasses) {
+                    glasses.visible = false;
                 }
                 
-                this.updateStatus('Camera stopped', 'yellow');
-                this.showToast('Camera stopped');
-                this.faceGuide.style.display = 'none';
+                updateStatus('Camera stopped', 'yellow');
+                showToast('Camera stopped');
+                faceGuide.style.display = 'none';
             }
             
-            processFaceResults(results) {
+            // Process face results
+            function processFaceResults(results) {
                 // Update canvas
-                const ctx = this.canvasOutput.getContext('2d');
-                this.canvasOutput.width = this.video.videoWidth || 1280;
-                this.canvasOutput.height = this.video.videoHeight || 720;
+                const ctx = canvasOutput.getContext('2d');
+                canvasOutput.width = video.videoWidth || 1280;
+                canvasOutput.height = video.videoHeight || 720;
                 
                 ctx.save();
-                ctx.clearRect(0, 0, this.canvasOutput.width, this.canvasOutput.height);
+                ctx.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
                 
                 // Draw video (mirrored)
                 ctx.scale(-1, 1);
-                ctx.drawImage(this.video, -this.canvasOutput.width, 0, this.canvasOutput.width, this.canvasOutput.height);
+                ctx.drawImage(video, -canvasOutput.width, 0, canvasOutput.width, canvasOutput.height);
                 ctx.restore();
                 
                 if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                     const landmarks = results.multiFaceLandmarks[0];
                     
-                    if (!this.isFaceDetected) {
-                        this.isFaceDetected = true;
-                        this.faceGuide.style.display = 'none';
-                        this.updateStatus('Face detected!', 'green');
-                        this.showToast('Face detected! Glasses fitted.');
+                    if (!isFaceDetected) {
+                        isFaceDetected = true;
+                        faceGuide.style.display = 'none';
+                        updateStatus('Face detected!', 'green');
+                        showToast('Face detected! Glasses fitted.');
                     }
                     
                     // Update glasses position
-                    this.updateGlassesPosition(landmarks);
+                    updateGlassesPosition(landmarks);
                     
                 } else {
-                    this.isFaceDetected = false;
-                    if (this.glasses) {
-                        this.glasses.visible = false;
+                    isFaceDetected = false;
+                    if (glasses) {
+                        glasses.visible = false;
                     }
-                    this.faceGuide.style.display = 'block';
-                    this.updateStatus('Looking for face...', 'blue');
+                    faceGuide.style.display = 'block';
+                    updateStatus('Looking for face...', 'blue');
                 }
             }
             
-            updateGlassesPosition(landmarks) {
-                if (!this.glasses) return;
+            // Update glasses position
+            function updateGlassesPosition(landmarks) {
+                if (!glasses) return;
                 
                 // Get eye positions
                 const leftEye = landmarks[33];
                 const rightEye = landmarks[263];
-                const noseTip = landmarks[1];
                 
-                // Calculate center
+                // Calculate center between eyes
                 const centerX = (leftEye.x + rightEye.x) / 2;
                 const centerY = (leftEye.y + rightEye.y) / 2;
                 
-                // Calculate eye distance
+                // Calculate eye distance for scaling
                 const eyeDistance = Math.sqrt(
                     Math.pow(rightEye.x - leftEye.x, 2) + 
                     Math.pow(rightEye.y - leftEye.y, 2)
@@ -671,36 +690,37 @@
                 const scale = eyeDistance * 6;
                 
                 // Update glasses
-                this.glasses.visible = true;
-                this.glasses.position.x = x;
-                this.glasses.position.y = y;
-                this.glasses.scale.setScalar(scale * 0.08);
+                glasses.visible = true;
+                glasses.position.x = x;
+                glasses.position.y = y;
+                glasses.scale.setScalar(scale * 0.08);
                 
                 // Add slight rotation
                 const angle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
-                this.glasses.rotation.z = -angle;
+                glasses.rotation.z = -angle;
             }
             
-            takeScreenshot() {
-                if (!this.isFaceDetected) {
-                    this.showToast('Please start camera and wait for face detection');
+            // Take screenshot
+            function takeScreenshot() {
+                if (!isFaceDetected) {
+                    showToast('Please start camera and wait for face detection');
                     return;
                 }
                 
                 // Create canvas
                 const canvas = document.createElement('canvas');
-                canvas.width = this.video.videoWidth || 1280;
-                canvas.height = this.video.videoHeight || 720;
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
                 const ctx = canvas.getContext('2d');
                 
                 // Draw video
                 ctx.save();
                 ctx.scale(-1, 1);
-                ctx.drawImage(this.video, -canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
                 ctx.restore();
                 
                 // Draw glasses
-                ctx.drawImage(this.threeCanvas, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(threeCanvas, 0, 0, canvas.width, canvas.height);
                 
                 // Create download
                 const link = document.createElement('a');
@@ -708,39 +728,67 @@
                 link.href = canvas.toDataURL('image/png');
                 link.click();
                 
-                this.showToast('Screenshot saved!');
+                showToast('Screenshot saved!');
             }
             
-            updateStatus(message, color) {
-                this.statusText.textContent = message;
-                this.statusDot.className = 'status-dot';
-                if (color === 'green') this.statusDot.classList.add('green');
-                else if (color === 'blue') this.statusDot.classList.add('blue');
-                else if (color === 'yellow') this.statusDot.classList.add('yellow');
-                else this.statusDot.classList.add('red');
+            // Update status
+            function updateStatus(message, color) {
+                statusText.textContent = message;
+                statusDot.className = 'status-dot';
+                if (color === 'green') statusDot.classList.add('green');
+                else if (color === 'blue') statusDot.classList.add('blue');
+                else if (color === 'yellow') statusDot.classList.add('yellow');
+                else statusDot.classList.add('red');
             }
             
-            showToast(message) {
-                this.toast.textContent = message;
-                this.toast.classList.add('show');
+            // Show toast
+            function showToast(message) {
+                toast.textContent = message;
+                toast.classList.add('show');
                 
                 setTimeout(() => {
-                    this.toast.classList.remove('show');
+                    toast.classList.remove('show');
                 }, 3000);
             }
             
-            animate() {
-                requestAnimationFrame(() => this.animate());
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
                 
-                if (this.renderer && this.scene && this.camera) {
-                    this.renderer.render(this.scene, this.camera);
+                if (renderer && scene && camera) {
+                    renderer.render(scene, camera);
                 }
             }
-        }
-        
-        // Start when page loads
-        window.addEventListener('DOMContentLoaded', () => {
-            new SimpleARGlasses();
+            
+            // SETUP EVENT LISTENERS
+            console.log("Setting up event listeners...");
+            
+            // 1. Start Camera Button - BIG GREEN BUTTON
+            startBtn.addEventListener('click', startCamera);
+            
+            // 2. Stop Camera Button - BIG RED BUTTON
+            stopBtn.addEventListener('click', stopCamera);
+            
+            // 3. Screenshot Button - BIG BLUE BUTTON
+            screenshotBtn.addEventListener('click', takeScreenshot);
+            
+            // 4. Glasses selection
+            glassBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    glassBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentModel = this.dataset.model;
+                    createGlasses();
+                });
+            });
+            
+            // Initialize everything
+            initThreeJS();
+            initFaceMesh();
+            
+            // Show initial message
+            updateStatus('Ready to start', 'yellow');
+            console.log("AR Glasses fully initialized - ready to use!");
         });
     </script>
 </body>
