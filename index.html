@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NWADRI - Essayez vos lunettes en AR</title>
+    <title>NWADRI - Filtre Lunettes AR</title>
     
     <style>
-        /* RESET */
         * {
             margin: 0;
             padding: 0;
@@ -14,68 +13,62 @@
         }
         
         body {
-            font-family: 'Arial', sans-serif;
-            background: #0a0a0a;
+            font-family: Arial, sans-serif;
+            background: #111;
             color: white;
             min-height: 100vh;
-            overflow-x: hidden;
         }
         
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
+            max-width: 100%;
             padding: 20px;
         }
         
-        /* HEADER */
         header {
             text-align: center;
-            padding: 30px 20px;
-            margin-bottom: 30px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
         
         .logo {
-            font-size: 3.5rem;
-            font-weight: 900;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
         }
         
         .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.8;
+            color: #888;
             margin-bottom: 30px;
         }
         
-        /* BOUTONS */
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         
         .btn {
             padding: 12px 25px;
-            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            background: #4ecdc4;
             color: white;
             border: none;
-            border-radius: 50px;
+            border-radius: 25px;
             font-size: 1rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 8px;
+            transition: all 0.3s;
         }
         
         .btn:hover:not(:disabled) {
+            background: #45b7af;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 198, 255, 0.4);
         }
         
         .btn:disabled {
@@ -84,27 +77,46 @@
         }
         
         .btn-red {
-            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            background: #ff6b6b;
         }
         
         .btn-green {
-            background: linear-gradient(45deg, #56ab2f, #a8e063);
+            background: #1dd1a1;
         }
         
-        /* ZONE AR */
+        /* Zone AR */
         .ar-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
             position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         
-        #ar-canvas {
+        #video {
             width: 100%;
-            height: 500px;
-            background: #000;
-            border-radius: 10px;
+            height: auto;
             display: block;
+            transform: scaleX(-1); /* Effet miroir */
+        }
+        
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
         
         .loading {
@@ -113,86 +125,81 @@
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.8);
             padding: 30px;
             border-radius: 10px;
-            border: 2px solid #00c6ff;
+            border: 2px solid #4ecdc4;
+            color: white;
         }
         
         .loading i {
             font-size: 2.5rem;
-            color: #00c6ff;
             margin-bottom: 15px;
-            display: block;
+            color: #4ecdc4;
         }
         
-        /* MODÈLES */
+        /* Modèles */
         .models {
             background: rgba(255,255,255,0.05);
-            padding: 25px;
+            padding: 20px;
             border-radius: 15px;
             margin-top: 30px;
+            max-width: 640px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .model-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
             margin-top: 20px;
         }
         
-        .model-card {
+        .model-btn {
+            padding: 15px;
             background: rgba(255,255,255,0.1);
             border: 2px solid transparent;
             border-radius: 10px;
-            padding: 20px;
-            text-align: center;
+            color: white;
             cursor: pointer;
             transition: all 0.3s;
+            min-width: 120px;
+            text-align: center;
         }
         
-        .model-card:hover {
-            background: rgba(255,255,255,0.15);
-            transform: translateY(-5px);
+        .model-btn:hover {
+            background: rgba(255,255,255,0.2);
         }
         
-        .model-card.active {
-            border-color: #00c6ff;
-            background: rgba(0, 198, 255, 0.1);
+        .model-btn.active {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.2);
         }
         
         .model-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: #00c6ff;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #4ecdc4;
         }
         
-        .model-name {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        /* MESSAGES */
+        /* Message */
         .message {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            padding: 15px 25px;
-            background: #00c6ff;
+            background: #4ecdc4;
             color: white;
+            padding: 15px 20px;
             border-radius: 8px;
-            z-index: 1000;
             animation: slideIn 0.3s ease;
+            z-index: 1000;
             max-width: 300px;
         }
         
         .message.error {
-            background: #ff416c;
-        }
-        
-        .message.success {
-            background: #56ab2f;
+            background: #ff6b6b;
         }
         
         @keyframes slideIn {
@@ -200,20 +207,31 @@
             to { transform: translateX(0); opacity: 1; }
         }
         
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .logo { font-size: 2.5rem; }
-            #ar-canvas { height: 400px; }
-            .model-grid { grid-template-columns: repeat(2, 1fr); }
+        /* Guide */
+        .face-guide {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+            border: 2px solid #4ecdc4;
         }
         
-        @media (max-width: 480px) {
-            .model-grid { grid-template-columns: 1fr; }
-            #ar-canvas { height: 350px; }
+        @media (max-width: 768px) {
+            .logo { font-size: 2.5rem; }
+            .model-grid { justify-content: center; }
+            .model-btn { min-width: 100px; }
         }
     </style>
     
-    <!-- Three.js -->
+    <!-- FaceAPI.js pour le suivi facial -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@0.22.2/dist/face-api.min.js"></script>
+    
+    <!-- Three.js pour les modèles 3D -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
     
@@ -222,199 +240,181 @@
 </head>
 <body>
     <div class="container">
-        <!-- HEADER -->
         <header>
             <h1 class="logo">NWADRI</h1>
-            <p class="subtitle">Essayez vos lunettes de soleil en réalité augmentée</p>
+            <p class="subtitle">Filtre lunettes AR avec suivi facial</p>
             
             <div class="controls">
-                <button id="startCamera" class="btn">
-                    <i class="fas fa-camera"></i> Activer Caméra
+                <button id="startBtn" class="btn">
+                    <i class="fas fa-play"></i> Démarrer
                 </button>
-                <button id="startAR" class="btn btn-green" disabled>
-                    <i class="fas fa-vr-cardboard"></i> Afficher Lunettes
+                <button id="stopBtn" class="btn btn-red" disabled>
+                    <i class="fas fa-stop"></i> Arrêter
                 </button>
-                <button id="stopAR" class="btn btn-red" disabled>
-                    <i class="fas fa-stop"></i> Cacher Lunettes
+                <button id="switchBtn" class="btn">
+                    <i class="fas fa-sync-alt"></i> Caméra
                 </button>
             </div>
         </header>
         
-        <!-- ZONE AR -->
+        <!-- Zone AR -->
         <div class="ar-container">
-            <canvas id="ar-canvas"></canvas>
+            <video id="video" autoplay muted playsinline></video>
+            <div id="overlay">
+                <canvas id="canvas"></canvas>
+            </div>
             
             <div id="loading" class="loading" style="display: none;">
                 <i class="fas fa-spinner fa-spin"></i>
-                <p>Chargement...</p>
+                <p>Chargement des modèles faciaux...</p>
+            </div>
+            
+            <div class="face-guide" style="display: none;">
+                <p><i class="fas fa-check-circle"></i> Visage détecté</p>
+                <p><small>Les lunettes suivent votre visage</small></p>
             </div>
         </div>
         
-        <!-- MODÈLES -->
+        <!-- Modèles -->
         <div class="models">
-            <h2 style="text-align: center; margin-bottom: 20px;">
-                <i class="fas fa-sunglasses"></i> Nos Modèles
-            </h2>
+            <h3 style="text-align: center; margin-bottom: 20px;">
+                <i class="fas fa-sunglasses"></i> Choisissez vos lunettes
+            </h3>
             
             <div class="model-grid">
-                <div class="model-card active" data-model="1">
-                    <div class="model-icon">
-                        <i class="fas fa-glasses"></i>
-                    </div>
-                    <div class="model-name">Classic Black</div>
-                    <div style="color: #00c6ff; font-weight: 600;">€129</div>
-                </div>
+                <button class="model-btn active" data-model="1">
+                    <div class="model-icon"><i class="fas fa-glasses"></i></div>
+                    <div>Classic</div>
+                </button>
                 
-                <div class="model-card" data-model="2">
-                    <div class="model-icon">
-                        <i class="fas fa-sun"></i>
-                    </div>
-                    <div class="model-name">Golden Style</div>
-                    <div style="color: #00c6ff; font-weight: 600;">€159</div>
-                </div>
+                <button class="model-btn" data-model="2">
+                    <div class="model-icon"><i class="fas fa-sun"></i></div>
+                    <div>Golden</div>
+                </button>
                 
-                <div class="model-card" data-model="3">
-                    <div class="model-icon">
-                        <i class="fas fa-gem"></i>
-                    </div>
-                    <div class="model-name">Premium Silver</div>
-                    <div style="color: #00c6ff; font-weight: 600;">€179</div>
-                </div>
+                <button class="model-btn" data-model="3">
+                    <div class="model-icon"><i class="fas fa-gem"></i></div>
+                    <div>Premium</div>
+                </button>
             </div>
         </div>
     </div>
     
-    <!-- APP JS -->
     <script>
 // ============================================================
-// NWADRI AR - APPLICATION COMPLÈTE
+// NWADRI - FILTRE LUNETTES AVEC SUIVI FACIAL
 // ============================================================
 
-class NwadriAR {
+class NwadriFaceFilter {
     constructor() {
-        // Éléments DOM
-        this.canvas = document.getElementById('ar-canvas');
+        // Éléments
+        this.video = document.getElementById('video');
+        this.canvas = document.getElementById('canvas');
         this.loading = document.getElementById('loading');
+        this.faceGuide = document.querySelector('.face-guide');
+        this.ctx = this.canvas.getContext('2d');
         
         // ============================================================
-        // ICI : METTEZ VOS URLs .glb
+        // ICI : METTEZ VOS URLs .glb (IMPORTANT !)
         // ============================================================
         this.models = {
             '1': {
                 name: 'Classic Black',
-                price: '€129',
-                // ↓↓↓ REMPLACEZ CE LIEN PAR VOTRE FICHIER .glb ↓↓↓
+                // ↓↓↓ REMPLACEZ PAR VOTRE URL .glb ↓↓↓
                 glbUrl: 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb',
-                // Paramètres de position (à ajuster selon votre modèle)
-                scale: 0.15,           // Taille : augmentez si trop petit
-                positionY: -0.05,      // Position verticale : + = plus haut, - = plus bas
-                positionZ: -0.4,       // Distance : + = plus loin, - = plus près
-                rotationY: Math.PI     // Rotation pour caméra frontale
+                // Ajustez ces valeurs selon votre modèle
+                scale: 0.18,
+                positionY: 0.15,   // Ajustez pour aligner avec les yeux
+                bridgeWidth: 0.12  // Distance entre les yeux
             },
             '2': {
                 name: 'Golden Style',
-                price: '€159',
-                // ↓↓↓ REMPLACEZ CE LIEN PAR VOTRE FICHIER .glb ↓↓↓
+                // ↓↓↓ REMPLACEZ PAR VOTRE URL .glb ↓↓↓
                 glbUrl: 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb',
-                scale: 0.15,
-                positionY: -0.05,
-                positionZ: -0.4,
-                rotationY: Math.PI
+                scale: 0.18,
+                positionY: 0.15,
+                bridgeWidth: 0.12
             },
             '3': {
                 name: 'Premium Silver',
-                price: '€179',
-                // ↓↓↓ REMPLACEZ CE LIEN PAR VOTRE FICHIER .glb ↓↓↓
+                // ↓↓↓ REMPLACEZ PAR VOTRE URL .glb ↓↓↓
                 glbUrl: 'https://pub-72b1924cc2494065a2af6bf69f360686.r2.dev/Nwader.glb',
-                scale: 0.15,
-                positionY: -0.05,
-                positionZ: -0.4,
-                rotationY: Math.PI
+                scale: 0.18,
+                positionY: 0.15,
+                bridgeWidth: 0.12
             }
         };
         // ============================================================
-        // FIN DES URLs .glb
-        // ============================================================
         
         // État
-        this.isCameraActive = false;
-        this.isARActive = false;
+        this.isRunning = false;
         this.currentModel = '1';
-        this.video = null;
+        this.currentGlasses = null;
+        this.faceDetected = false;
+        this.cameraFacingMode = 'user';
         
         // Three.js
         this.scene = null;
         this.camera = null;
         this.renderer = null;
-        this.currentGlasses = null;
-        this.videoTexture = null;
         
         // Initialisation
         this.init();
     }
     
-    // ==================== INITIALISATION ====================
-    init() {
-        console.log('🚀 NWADRI AR - Initialisation');
+    async init() {
+        console.log('🎭 Initialisation filtre lunettes...');
         
         // Taille canvas
-        this.canvas.width = this.canvas.clientWidth;
-        this.canvas.height = this.canvas.clientHeight;
+        this.updateCanvasSize();
         
         // Événements
         this.setupEventListeners();
         
+        // Charger modèles FaceAPI
+        await this.loadFaceModels();
+        
+        // Initialiser Three.js
+        this.initThreeJS();
+        
         console.log('✅ Prêt !');
     }
     
-    // ==================== CAMÉRA ====================
-    async startCamera() {
+    async loadFaceModels() {
         try {
-            this.showLoading('Accès à la caméra...');
+            this.showLoading('Chargement des modèles faciaux...');
             
-            // Créer élément vidéo
-            this.video = document.createElement('video');
-            this.video.playsInline = true;
-            this.video.muted = true;
-            this.video.style.display = 'none';
-            document.body.appendChild(this.video);
+            // Charger les modèles depuis CDN
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@0.22.2/model/');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@0.22.2/model/');
             
-            // Accéder à la caméra
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'user', // Caméra frontale
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                }
-            });
-            
-            this.video.srcObject = stream;
-            await this.video.play();
-            
-            // Initialiser Three.js avec la vidéo
-            this.initThreeJS();
-            
-            this.isCameraActive = true;
-            this.updateUI();
+            console.log('✅ Modèles faciaux chargés');
             this.hideLoading();
-            this.showMessage('✅ Caméra activée', 'success');
             
         } catch (error) {
-            console.error('Erreur caméra:', error);
+            console.error('❌ Erreur chargement modèles faciaux:', error);
             this.hideLoading();
-            this.showMessage('❌ Erreur caméra: ' + error.message, 'error');
+            this.showMessage('Erreur chargement modèles faciaux', 'error');
         }
     }
     
-    // ==================== THREE.JS ====================
     initThreeJS() {
         // Scène
         this.scene = new THREE.Scene();
         
-        // Caméra Three.js (pas la webcam)
-        const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
-        this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
-        this.camera.position.z = 5;
+        // Caméra Three.js (orthographique pour 2D)
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        
+        this.camera = new THREE.OrthographicCamera(
+            -width / 2,
+            width / 2,
+            height / 2,
+            -height / 2,
+            1,
+            1000
+        );
+        this.camera.position.z = 500;
         
         // Renderer
         this.renderer = new THREE.WebGLRenderer({
@@ -422,47 +422,182 @@ class NwadriAR {
             alpha: true,
             antialias: true
         });
-        this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        
-        // Créer la texture vidéo
-        this.createVideoBackground();
-        
-        // Lumières
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        this.scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(5, 5, 5);
-        this.scene.add(directionalLight);
+        this.renderer.setSize(width, height);
+        this.renderer.setClearColor(0x000000, 0); // Transparent
     }
     
-    createVideoBackground() {
-        // Créer une texture à partir de la vidéo
-        this.videoTexture = new THREE.VideoTexture(this.video);
-        this.videoTexture.minFilter = THREE.LinearFilter;
-        this.videoTexture.magFilter = THREE.LinearFilter;
-        this.videoTexture.format = THREE.RGBAFormat;
-        
-        // Créer un plan pour afficher la vidéo
-        const geometry = new THREE.PlaneGeometry(10, 7.5);
-        const material = new THREE.MeshBasicMaterial({
-            map: this.videoTexture,
-            transparent: true,
-            opacity: 1.0
-        });
-        
-        const plane = new THREE.Mesh(geometry, material);
-        plane.position.z = -5;
-        this.scene.add(plane);
+    // ==================== DÉMARRER LA CAMÉRA ====================
+    async startCamera() {
+        try {
+            this.showLoading('Démarrage caméra...');
+            
+            // Arrêter si déjà en cours
+            if (this.isRunning) {
+                this.stopCamera();
+            }
+            
+            // Accéder à la caméra
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: this.cameraFacingMode,
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            });
+            
+            this.video.srcObject = stream;
+            
+            // Attendre que la vidéo soit prête
+            await new Promise((resolve) => {
+                this.video.onloadedmetadata = () => {
+                    this.video.play();
+                    resolve();
+                };
+            });
+            
+            // Ajuster la taille du canvas
+            this.updateCanvasSize();
+            
+            // Démarrer la détection
+            this.isRunning = true;
+            this.startDetection();
+            
+            this.hideLoading();
+            this.showMessage('✅ Filtre activé', 'success');
+            this.updateUI();
+            
+        } catch (error) {
+            console.error('❌ Erreur caméra:', error);
+            this.hideLoading();
+            this.showMessage('Erreur caméra: ' + error.message, 'error');
+        }
     }
     
-    // ==================== CHARGEMENT .glb ====================
-    async loadGlasses(modelId) {
-        const modelInfo = this.models[modelId];
+    stopCamera() {
+        this.isRunning = false;
+        
+        if (this.video.srcObject) {
+            this.video.srcObject.getTracks().forEach(track => track.stop());
+            this.video.srcObject = null;
+        }
+        
+        // Effacer le canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Cacher le guide
+        this.faceGuide.style.display = 'none';
+        
+        this.updateUI();
+    }
+    
+    switchCamera() {
+        this.cameraFacingMode = this.cameraFacingMode === 'user' ? 'environment' : 'user';
+        this.stopCamera();
+        setTimeout(() => this.startCamera(), 500);
+    }
+    
+    // ==================== SUIVI FACIAL ====================
+    async startDetection() {
+        if (!this.isRunning) return;
         
         try {
-            console.log('Chargement:', modelInfo.glbUrl);
+            // Détecter les visages
+            const detections = await faceapi.detectAllFaces(
+                this.video,
+                new faceapi.TinyFaceDetectorOptions()
+            ).withFaceLandmarks();
+            
+            // Effacer le canvas
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            if (detections.length > 0) {
+                // Visage détecté !
+                this.faceDetected = true;
+                this.faceGuide.style.display = 'block';
+                
+                // Récupérer les points du visage
+                const landmarks = detections[0].landmarks;
+                
+                // Positionner les lunettes
+                await this.positionGlassesOnFace(landmarks);
+                
+                // Dessiner les points de repère (optionnel, pour débogage)
+                this.drawLandmarks(landmarks);
+                
+            } else {
+                // Pas de visage détecté
+                this.faceDetected = false;
+                this.faceGuide.style.display = 'none';
+                
+                // Cacher les lunettes
+                if (this.currentGlasses) {
+                    this.scene.remove(this.currentGlasses);
+                    this.currentGlasses = null;
+                }
+            }
+            
+        } catch (error) {
+            console.error('Erreur détection:', error);
+        }
+        
+        // Continuer la détection
+        requestAnimationFrame(() => this.startDetection());
+    }
+    
+    // ==================== POSITIONNER LUNETTES SUR LE VISAGE ====================
+    async positionGlassesOnFace(landmarks) {
+        const modelInfo = this.models[this.currentModel];
+        
+        // Points des yeux
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        
+        // Calculer le centre entre les yeux
+        const eyeCenter = {
+            x: (leftEye[0].x + rightEye[3].x) / 2,
+            y: (leftEye[0].y + rightEye[3].y) / 2
+        };
+        
+        // Calculer la distance entre les yeux
+        const eyeDistance = Math.sqrt(
+            Math.pow(rightEye[3].x - leftEye[0].x, 2) +
+            Math.pow(rightEye[3].y - leftEye[0].y, 2)
+        );
+        
+        // Charger les lunettes si pas déjà fait
+        if (!this.currentGlasses) {
+            this.currentGlasses = await this.loadGlassesModel();
+            this.scene.add(this.currentGlasses);
+        }
+        
+        // Positionner les lunettes
+        if (this.currentGlasses) {
+            // Ajuster la position
+            this.currentGlasses.position.x = (eyeCenter.x - this.canvas.width / 2);
+            this.currentGlasses.position.y = -(eyeCenter.y - this.canvas.height / 2) + modelInfo.positionY;
+            
+            // Ajuster l'échelle selon la distance des yeux
+            const scale = (eyeDistance / 100) * modelInfo.scale;
+            this.currentGlasses.scale.set(scale, scale, scale);
+            
+            // Ajuster la rotation selon l'orientation du visage
+            const angle = Math.atan2(
+                rightEye[3].y - leftEye[0].y,
+                rightEye[3].x - leftEye[0].x
+            );
+            this.currentGlasses.rotation.z = -angle;
+            
+            // Rendu
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+    
+    // ==================== CHARGEMENT MODÈLE .glb ====================
+    async loadGlassesModel() {
+        const modelInfo = this.models[this.currentModel];
+        
+        try {
+            console.log('Chargement modèle:', modelInfo.glbUrl);
             
             // Charger le modèle .glb
             const loader = new THREE.GLTFLoader();
@@ -474,12 +609,9 @@ class NwadriAR {
                         console.log('✅ Modèle chargé');
                         resolve(gltf);
                     },
-                    (progress) => {
-                        const percent = (progress.loaded / progress.total * 100).toFixed(1);
-                        console.log(`Chargement: ${percent}%`);
-                    },
+                    undefined,
                     (error) => {
-                        console.error('Erreur chargement:', error);
+                        console.error('❌ Erreur chargement:', error);
                         reject(error);
                     }
                 );
@@ -487,383 +619,189 @@ class NwadriAR {
             
             const model = gltf.scene;
             
-            // ============================================================
-            // POSITIONNEMENT SUR LE VISAGE
-            // ============================================================
+            // Centrer le modèle
+            model.position.set(0, 0, 0);
             
-            // Position sur le visage (valeurs calibrées)
-            model.position.set(
-                0,                    // Centre horizontal
-                modelInfo.positionY,  // Position verticale (niveau des yeux)
-                modelInfo.positionZ   // Distance par rapport à la caméra
-            );
-            
-            // Taille
-            model.scale.set(
-                modelInfo.scale,
-                modelInfo.scale,
-                modelInfo.scale
-            );
-            
-            // Rotation pour caméra frontale
-            model.rotation.set(
-                0,
-                modelInfo.rotationY,  // Rotation de 180° pour effet miroir
-                0
-            );
-            
-            // Optimiser le modèle
-            this.optimizeModel(model);
+            // Configurer le matériau pour transparence
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.transparent = true;
+                    child.material.depthWrite = false;
+                    child.material.side = THREE.DoubleSide;
+                    
+                    // Pour les verres
+                    if (child.material.name?.includes('glass') || 
+                        child.material.name?.includes('lens')) {
+                        child.material.opacity = 0.5;
+                    }
+                }
+            });
             
             return model;
             
         } catch (error) {
-            console.error('Erreur chargement, création fallback...');
-            
-            // Créer des lunettes de secours
-            return this.createFallbackGlasses(modelInfo);
+            console.error('Erreur, création modèle basique...');
+            return this.createBasicGlasses();
         }
     }
     
-    optimizeModel(model) {
-        model.traverse((child) => {
-            if (child.isMesh) {
-                // Rendre double face
-                child.material.side = THREE.DoubleSide;
-                
-                // Pour les verres
-                if (child.name.toLowerCase().includes('glass') || 
-                    child.name.toLowerCase().includes('lens')) {
-                    child.material.transparent = true;
-                    child.material.opacity = 0.6;
-                }
-            }
-        });
-    }
-    
-    createFallbackGlasses(modelInfo) {
-        console.log('Création lunettes de secours');
-        
+    createBasicGlasses() {
         const group = new THREE.Group();
         
         // Matériaux
-        const frameMaterial = new THREE.MeshStandardMaterial({
+        const frameMat = new THREE.MeshBasicMaterial({
             color: 0x000000,
-            metalness: 0.8,
-            roughness: 0.2
+            transparent: true,
+            opacity: 0.8
         });
         
-        const lensMaterial = new THREE.MeshPhysicalMaterial({
+        const lensMat = new THREE.MeshBasicMaterial({
             color: 0x1a5276,
-            transmission: 0.7,
-            roughness: 0.1,
             transparent: true,
             opacity: 0.4
         });
         
         // Cadres
         const leftFrame = new THREE.Mesh(
-            new THREE.TorusGeometry(0.4, 0.04, 16, 100),
-            frameMaterial
+            new THREE.RingGeometry(40, 45, 32),
+            frameMat
         );
-        leftFrame.position.x = -0.45;
+        leftFrame.position.x = -50;
         
         const rightFrame = new THREE.Mesh(
-            new THREE.TorusGeometry(0.4, 0.04, 16, 100),
-            frameMaterial
+            new THREE.RingGeometry(40, 45, 32),
+            frameMat
         );
-        rightFrame.position.x = 0.45;
+        rightFrame.position.x = 50;
         
         // Verres
         const leftLens = new THREE.Mesh(
-            new THREE.CircleGeometry(0.35, 32),
-            lensMaterial
+            new THREE.CircleGeometry(40, 32),
+            lensMat
         );
-        leftLens.position.x = -0.45;
-        leftLens.position.z = 0.02;
+        leftLens.position.x = -50;
         
         const rightLens = new THREE.Mesh(
-            new THREE.CircleGeometry(0.35, 32),
-            lensMaterial
+            new THREE.CircleGeometry(40, 32),
+            lensMat
         );
-        rightLens.position.x = 0.45;
-        rightLens.position.z = 0.02;
+        rightLens.position.x = 50;
         
         // Pont
         const bridge = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.02, 0.02),
-            frameMaterial
+            new THREE.BoxGeometry(30, 5, 5),
+            frameMat
         );
         
-        // Ajouter au groupe
         group.add(leftFrame, rightFrame, leftLens, rightLens, bridge);
-        
-        // Positionner sur le visage
-        group.position.set(0, modelInfo.positionY, modelInfo.positionZ);
-        group.scale.set(modelInfo.scale, modelInfo.scale, modelInfo.scale);
-        group.rotation.y = modelInfo.rotationY;
         
         return group;
     }
     
-    // ==================== AFFICHER LUNETTES ====================
-    async startAR() {
-        if (!this.isCameraActive) {
-            this.showMessage('Activez d\'abord la caméra', 'error');
-            return;
-        }
+    // ==================== DESSINER POINTS DU VISAGE (débogage) ====================
+    drawLandmarks(landmarks) {
+        this.ctx.strokeStyle = '#4ecdc4';
+        this.ctx.lineWidth = 2;
         
-        try {
-            this.showLoading('Positionnement des lunettes...');
-            
-            // Charger les lunettes
-            this.currentGlasses = await this.loadGlasses(this.currentModel);
-            
-            // Ajouter à la scène
-            this.scene.add(this.currentGlasses);
-            
-            // Démarrer l'animation
-            this.isARActive = true;
-            this.startAnimation();
-            
-            this.hideLoading();
-            this.showMessage('✨ Lunettes affichées sur votre visage', 'success');
-            this.updateUI();
-            
-            // Afficher les contrôles d'ajustement
-            this.showAdjustControls();
-            
-        } catch (error) {
-            console.error('Erreur AR:', error);
-            this.hideLoading();
-            this.showMessage('Erreur affichage lunettes', 'error');
-        }
-    }
-    
-    stopAR() {
-        this.isARActive = false;
+        // Yeux
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
         
-        // Retirer les lunettes
-        if (this.currentGlasses && this.scene) {
-            this.scene.remove(this.currentGlasses);
-            this.currentGlasses = null;
-        }
+        this.ctx.beginPath();
+        leftEye.forEach((point, i) => {
+            if (i === 0) this.ctx.moveTo(point.x, point.y);
+            else this.ctx.lineTo(point.x, point.y);
+        });
+        this.ctx.closePath();
+        this.ctx.stroke();
         
-        this.updateUI();
-        this.hideAdjustControls();
-    }
-    
-    // ==================== ANIMATION ====================
-    startAnimation() {
-        const animate = () => {
-            if (!this.isARActive) return;
-            
-            requestAnimationFrame(animate);
-            
-            // Mettre à jour la texture vidéo
-            if (this.videoTexture) {
-                this.videoTexture.needsUpdate = true;
-            }
-            
-            // Animation légère des lunettes
-            if (this.currentGlasses) {
-                // Suivi subtil du "visage"
-                const time = Date.now() * 0.001;
-                this.currentGlasses.position.y = this.models[this.currentModel].positionY + Math.sin(time) * 0.01;
-            }
-            
-            // Rendu
-            if (this.renderer && this.scene && this.camera) {
-                this.renderer.render(this.scene, this.camera);
-            }
-        };
-        
-        animate();
+        this.ctx.beginPath();
+        rightEye.forEach((point, i) => {
+            if (i === 0) this.ctx.moveTo(point.x, point.y);
+            else this.ctx.lineTo(point.x, point.y);
+        });
+        this.ctx.closePath();
+        this.ctx.stroke();
     }
     
     // ==================== CHANGER DE MODÈLE ====================
     async switchModel(modelId) {
-        if (!this.isARActive) {
-            this.currentModel = modelId;
-            return;
+        this.currentModel = modelId;
+        
+        // Retirer les anciennes lunettes
+        if (this.currentGlasses) {
+            this.scene.remove(this.currentGlasses);
+            this.currentGlasses = null;
         }
         
-        try {
-            // Retirer les anciennes lunettes
-            if (this.currentGlasses && this.scene) {
-                this.scene.remove(this.currentGlasses);
-            }
-            
-            // Charger les nouvelles
-            this.currentModel = modelId;
-            this.currentGlasses = await this.loadGlasses(modelId);
-            
-            // Ajouter à la scène
+        // Si un visage est détecté, charger les nouvelles lunettes
+        if (this.faceDetected) {
+            this.currentGlasses = await this.loadGlassesModel();
             this.scene.add(this.currentGlasses);
+        }
+        
+        this.showMessage(`👓 ${this.models[modelId].name}`);
+    }
+    
+    // ==================== UTILITAIRES ====================
+    updateCanvasSize() {
+        const container = document.querySelector('.ar-container');
+        if (container) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
             
-            this.showMessage(`👓 ${this.models[modelId].name}`, 'info');
+            this.canvas.width = width;
+            this.canvas.height = height;
             
-        } catch (error) {
-            console.error('Erreur changement modèle:', error);
+            if (this.renderer) {
+                this.renderer.setSize(width, height);
+                
+                // Mettre à jour la caméra Three.js
+                if (this.camera) {
+                    this.camera.left = -width / 2;
+                    this.camera.right = width / 2;
+                    this.camera.top = height / 2;
+                    this.camera.bottom = -height / 2;
+                    this.camera.updateProjectionMatrix();
+                }
+            }
         }
     }
     
-    // ==================== CONTRÔLES D'AJUSTEMENT ====================
-    showAdjustControls() {
-        const controls = `
-            <div id="adjust-controls" style="
-                position: absolute;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(0,0,0,0.8);
-                padding: 15px;
-                border-radius: 10px;
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
-                z-index: 100;
-            ">
-                <button class="adj-btn" data-action="up" title="Monter">
-                    <i class="fas fa-arrow-up"></i>
-                </button>
-                <button class="adj-btn" data-action="down" title="Descendre">
-                    <i class="fas fa-arrow-down"></i>
-                </button>
-                <button class="adj-btn" data-action="reset" title="Réinitialiser">
-                    <i class="fas fa-redo"></i>
-                </button>
-                <button class="adj-btn" data-action="left" title="Gauche">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <button class="adj-btn" data-action="right" title="Droite">
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-                <button class="adj-btn" data-action="bigger" title="Agrandir">
-                    <i class="fas fa-search-plus"></i>
-                </button>
-            </div>
-        `;
-        
-        const style = document.createElement('style');
-        style.textContent = `
-            .adj-btn {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                border: none;
-                background: #00c6ff;
-                color: white;
-                font-size: 1rem;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            .adj-btn:hover {
-                background: #0072ff;
-                transform: scale(1.1);
-            }
-        `;
-        
-        document.head.appendChild(style);
-        document.querySelector('.ar-container').insertAdjacentHTML('beforeend', controls);
-        
-        // Événements
-        document.querySelectorAll('.adj-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const action = e.currentTarget.dataset.action;
-                this.adjustGlasses(action);
-            });
-        });
-    }
-    
-    hideAdjustControls() {
-        const controls = document.getElementById('adjust-controls');
-        if (controls) controls.remove();
-    }
-    
-    adjustGlasses(action) {
-        if (!this.currentGlasses) return;
-        
-        const modelInfo = this.models[this.currentModel];
-        
-        switch (action) {
-            case 'up':
-                this.currentGlasses.position.y += 0.02;
-                break;
-            case 'down':
-                this.currentGlasses.position.y -= 0.02;
-                break;
-            case 'left':
-                this.currentGlasses.position.x -= 0.02;
-                break;
-            case 'right':
-                this.currentGlasses.position.x += 0.02;
-                break;
-            case 'bigger':
-                this.currentGlasses.scale.multiplyScalar(1.1);
-                break;
-            case 'reset':
-                this.currentGlasses.position.set(0, modelInfo.positionY, modelInfo.positionZ);
-                this.currentGlasses.scale.set(modelInfo.scale, modelInfo.scale, modelInfo.scale);
-                this.currentGlasses.rotation.set(0, modelInfo.rotationY, 0);
-                break;
-        }
-    }
-    
-    // ==================== UI ====================
     setupEventListeners() {
-        // Activer Caméra
-        document.getElementById('startCamera').addEventListener('click', () => {
-            this.startCamera();
-        });
+        document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+        document.getElementById('stopBtn').addEventListener('click', () => this.stopCamera());
+        document.getElementById('switchBtn').addEventListener('click', () => this.switchCamera());
         
-        // Afficher Lunettes
-        document.getElementById('startAR').addEventListener('click', () => {
-            this.startAR();
-        });
-        
-        // Cacher Lunettes
-        document.getElementById('stopAR').addEventListener('click', () => {
-            this.stopAR();
-        });
-        
-        // Changer modèle
-        document.querySelectorAll('.model-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const modelId = card.dataset.model;
+        // Changer de modèle
+        document.querySelectorAll('.model-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modelId = btn.dataset.model;
                 
-                // Mettre à jour la sélection
-                document.querySelectorAll('.model-card').forEach(c => {
-                    c.classList.remove('active');
+                document.querySelectorAll('.model-btn').forEach(b => {
+                    b.classList.remove('active');
                 });
-                card.classList.add('active');
+                btn.classList.add('active');
                 
-                // Changer de modèle
                 this.switchModel(modelId);
             });
         });
         
         // Redimensionnement
         window.addEventListener('resize', () => {
-            this.onResize();
+            this.updateCanvasSize();
+        });
+        
+        // Gestion erreurs vidéo
+        this.video.addEventListener('error', (e) => {
+            console.error('Erreur vidéo:', e);
+            this.showMessage('Erreur flux vidéo', 'error');
         });
     }
     
-    onResize() {
-        this.canvas.width = this.canvas.clientWidth;
-        this.canvas.height = this.canvas.clientHeight;
-        
-        if (this.camera && this.renderer) {
-            this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
-        }
-    }
-    
     updateUI() {
-        document.getElementById('startCamera').disabled = this.isCameraActive;
-        document.getElementById('startAR').disabled = !this.isCameraActive || this.isARActive;
-        document.getElementById('stopAR').disabled = !this.isARActive;
+        document.getElementById('startBtn').disabled = this.isRunning;
+        document.getElementById('stopBtn').disabled = !this.isRunning;
     }
     
     showLoading(text) {
@@ -880,36 +818,29 @@ class NwadriAR {
     }
     
     showMessage(text, type = 'info') {
-        // Supprimer ancien message
-        const old = document.querySelector('.message');
-        if (old) old.remove();
+        const oldMsg = document.querySelector('.message');
+        if (oldMsg) oldMsg.remove();
         
-        // Créer nouveau
-        const message = document.createElement('div');
-        message.className = `message ${type}`;
-        message.innerHTML = `
-            <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
-                              type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        const msg = document.createElement('div');
+        msg.className = `message ${type}`;
+        msg.innerHTML = `
+            <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
             ${text}
         `;
         
-        document.body.appendChild(message);
+        document.body.appendChild(msg);
         
-        // Auto-suppression
         setTimeout(() => {
-            if (message.parentElement) {
-                message.remove();
+            if (msg.parentElement) {
+                msg.style.opacity = '0';
+                setTimeout(() => msg.remove(), 300);
             }
         }, 3000);
     }
     
     // ==================== NETTOYAGE ====================
     cleanup() {
-        this.stopAR();
-        
-        if (this.video && this.video.srcObject) {
-            this.video.srcObject.getTracks().forEach(track => track.stop());
-        }
+        this.stopCamera();
         
         if (this.renderer) {
             this.renderer.dispose();
@@ -918,17 +849,17 @@ class NwadriAR {
 }
 
 // ==================== DÉMARRAGE ====================
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎬 NWADRI - Chargement...');
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🎬 NWADRI Face Filter - Chargement...');
     
-    // Vérifier Three.js
-    if (typeof THREE === 'undefined') {
-        alert('Erreur: Three.js non chargé. Vérifiez votre connexion.');
+    // Vérifier les APIs nécessaires
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Votre navigateur ne supporte pas l\'accès à la caméra.');
         return;
     }
     
     // Créer l'application
-    window.app = new NwadriAR();
+    window.app = new NwadriFaceFilter();
     
     // Nettoyage
     window.addEventListener('beforeunload', () => {
@@ -937,13 +868,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    console.log('✅ NWADRI - Prêt !');
-    
-    // Commandes de débogage
-    console.log('💡 Commandes disponibles:');
-    console.log('   app.startCamera() - Activer la caméra');
-    console.log('   app.startAR() - Afficher les lunettes');
-    console.log('   app.switchModel("2") - Changer de modèle');
+    console.log('✅ Application prête !');
+    console.log('💡 Commandes:');
+    console.log('   app.startCamera() - Démarrer le filtre');
+    console.log('   app.switchModel("2") - Changer de lunettes');
 });
     </script>
 </body>
