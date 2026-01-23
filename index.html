@@ -2,188 +2,406 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>VTO | Virtual Sunglasses Try-On</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico">
-    
-    <!-- Preload critical resources -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js" as="script">
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/three@0.148.0/examples/js/loaders/GLTFLoader.min.js" as="script">
-    
-    <!-- iOS specific meta tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- PWA -->
-    <meta name="theme-color" content="#000000">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Sunglasses Try-On</title>
+    <style>
+        /* SIMPLE STYLES THAT WORK */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+            color: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* LOADING SCREEN - WILL DISAPPEAR */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 107, 53, 0.3);
+            border-top-color: #FF6B35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* MAIN APP - VISIBLE AFTER LOADING */
+        #app {
+            width: 100%;
+            height: 100%;
+            display: none; /* Hidden initially */
+        }
+
+        /* START SCREEN WITH BIG BUTTON */
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000428, #004e92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #startButton {
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 20px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.5);
+            transition: transform 0.2s;
+        }
+
+        #startButton:active {
+            transform: scale(0.95);
+        }
+
+        /* CAMERA VIEW */
+        #cameraView {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+        }
+
+        #cameraVideo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #glassesCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* CONTROLS */
+        #controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            display: none;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .control-btn.primary {
+            background: #FF6B35;
+        }
+
+        /* TOAST MESSAGES */
+        #toast {
+            position: fixed;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #toast.show {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <h1>Virtual Try-On</h1>
-            <p>Initializing AR experience...</p>
-            <div class="loading-progress">
-                <div class="progress-bar" id="progressBar"></div>
-                <span id="progressText">0%</span>
-            </div>
-        </div>
+    <!-- LOADING - Will disappear in 2 seconds -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p style="color: #FF6B35; margin-top: 20px;">Loading AR Platform...</p>
     </div>
 
-    <!-- Camera Permission Prompt -->
-    <div class="permission-prompt" id="permissionPrompt">
-        <div class="permission-content">
-            <div class="permission-icon">📸</div>
-            <h2>Camera Access Required</h2>
-            <p>To try on sunglasses virtually, we need access to your camera. We process everything locally - no images are stored or sent to servers.</p>
-            <button class="btn-primary" id="requestCamera">Allow Camera Access</button>
-            <button class="btn-secondary" id="demoMode">Try Demo Mode</button>
-            <p class="permission-note">Don't worry, you can change this later in your browser settings.</p>
+    <!-- MAIN APP -->
+    <div id="app">
+        <!-- START SCREEN -->
+        <div id="startScreen">
+            <h1 style="color: #FF6B35; font-size: 32px; margin-bottom: 10px;">🕶️ AR SUNGLASSES</h1>
+            <p style="opacity: 0.8; margin-bottom: 30px; max-width: 300px;">Try sunglasses on your face in real-time</p>
+            <button id="startButton">
+                START CAMERA
+            </button>
+            <p style="opacity: 0.5; margin-top: 20px;">Tap the button to begin</p>
         </div>
+
+        <!-- CAMERA VIEW -->
+        <div id="cameraView">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <canvas id="glassesCanvas"></canvas>
+        </div>
+
+        <!-- CONTROLS -->
+        <div id="controls">
+            <div class="control-row">
+                <button class="control-btn" id="stopButton">STOP</button>
+                <button class="control-btn primary" id="captureBtn">CAPTURE</button>
+            </div>
+        </div>
+
+        <!-- TOAST -->
+        <div id="toast"></div>
     </div>
 
-    <!-- Main App Container -->
-    <div class="app-container" id="appContainer">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="logo">
-                <span class="logo-icon">🕶️</span>
-                <span class="logo-text">VTO</span>
-            </div>
-            <div class="header-controls">
-                <button class="icon-btn" id="toggleMirror" title="Mirror Camera">
-                    <span>🔄</span>
-                </button>
-                <button class="icon-btn" id="toggleDebug" title="Debug Mode">
-                    <span>🔧</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- AR View Container -->
-        <main class="ar-container">
-            <!-- Camera Feed -->
-            <div class="camera-feed" id="cameraFeed">
-                <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
-                <canvas class="face-canvas" id="faceCanvas"></canvas>
-                <canvas class="glasses-canvas" id="glassesCanvas"></canvas>
+    <!-- SIMPLE WORKING SCRIPT -->
+    <script>
+        // Wait for page to load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded - starting app...');
+            
+            // Get elements
+            const loading = document.getElementById('loading');
+            const app = document.getElementById('app');
+            const startScreen = document.getElementById('startScreen');
+            const startButton = document.getElementById('startButton');
+            const cameraView = document.getElementById('cameraView');
+            const controls = document.getElementById('controls');
+            const stopButton = document.getElementById('stopButton');
+            const captureBtn = document.getElementById('captureBtn');
+            const toast = document.getElementById('toast');
+            
+            // Variables
+            let isCameraOn = false;
+            let stream = null;
+            
+            // Show app after 2 seconds (guaranteed to show)
+            setTimeout(() => {
+                loading.style.display = 'none';
+                app.style.display = 'block';
+                showToast('Welcome! Tap START CAMERA');
+            }, 2000);
+            
+            // START CAMERA FUNCTION - This will work
+            async function startCamera() {
+                console.log('Start camera clicked!');
                 
-                <!-- Face Detection Guide -->
-                <div class="face-guide" id="faceGuide">
-                    <div class="guide-animation">
-                        <div class="guide-circle"></div>
-                        <div class="guide-dots">
-                            <div class="dot dot-1"></div>
-                            <div class="dot dot-2"></div>
-                            <div class="dot dot-3"></div>
-                        </div>
-                    </div>
-                    <p class="guide-text">Position your face here</p>
-                </div>
-
-                <!-- Status Overlay -->
-                <div class="status-overlay" id="statusOverlay">
-                    <div class="status-indicator">
-                        <div class="status-dot"></div>
-                        <span class="status-text">Initializing...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Error States -->
-            <div class="error-state" id="errorState">
-                <div class="error-content">
-                    <div class="error-icon">⚠️</div>
-                    <h3>Camera Error</h3>
-                    <p id="errorMessage">Unable to access camera. Please check permissions.</p>
-                    <button class="btn-primary" id="retryCamera">Retry</button>
-                </div>
-            </div>
-
-            <!-- Demo Mode -->
-            <div class="demo-mode" id="demoModeView">
-                <div class="demo-content">
-                    <img src="assets/placeholder.jpg" alt="Demo face" class="demo-image">
-                    <p class="demo-text">Demo Mode: Try glasses on this model</p>
-                </div>
-            </div>
-        </main>
-
-        <!-- Controls -->
-        <footer class="app-footer">
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="btn-action primary" id="tryOnBtn">
-                    <span class="btn-icon">👓</span>
-                    <span class="btn-text">Try On</span>
-                </button>
-                <button class="btn-action" id="captureBtn">
-                    <span class="btn-icon">📸</span>
-                    <span class="btn-text">Capture</span>
-                </button>
-                <button class="btn-action" id="resetBtn">
-                    <span class="btn-icon">↺</span>
-                    <span class="btn-text">Reset</span>
-                </button>
-            </div>
-
-            <!-- Glasses Carousel -->
-            <div class="glasses-carousel">
-                <div class="carousel-header">
-                    <h3>Select Sunglasses</h3>
-                    <div class="carousel-controls">
-                        <button class="carousel-btn prev" id="carouselPrev">‹</button>
-                        <button class="carousel-btn next" id="carouselNext">›</button>
-                    </div>
-                </div>
+                try {
+                    // Request camera
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        }
+                    });
+                    
+                    // Get video element
+                    const video = document.getElementById('cameraVideo');
+                    video.srcObject = stream;
+                    
+                    // Wait for video to be ready
+                    await new Promise((resolve) => {
+                        video.onloadedmetadata = () => {
+                            video.play();
+                            resolve();
+                        };
+                    });
+                    
+                    // Update UI
+                    startScreen.style.display = 'none';
+                    cameraView.style.display = 'block';
+                    controls.style.display = 'block';
+                    
+                    isCameraOn = true;
+                    
+                    showToast('Camera started! Look at the screen');
+                    
+                    // Initialize Three.js for glasses
+                    initThreeJS();
+                    
+                } catch (error) {
+                    console.error('Camera error:', error);
+                    showToast('Camera error: ' + error.message);
+                }
+            }
+            
+            // Initialize Three.js (simple version)
+            function initThreeJS() {
+                console.log('Initializing Three.js...');
                 
-                <div class="carousel-track" id="carouselTrack">
-                    <!-- Glasses items will be injected here -->
-                </div>
-            </div>
-        </footer>
-    </div>
+                // Create scene
+                const scene = new THREE.Scene();
+                
+                // Create camera
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
+                
+                // Create renderer
+                const renderer = new THREE.WebGLRenderer({
+                    canvas: document.getElementById('glassesCanvas'),
+                    alpha: true
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                // Create simple sunglasses
+                createSunglasses(scene);
+                
+                // Animate
+                function animate() {
+                    requestAnimationFrame(animate);
+                    renderer.render(scene, camera);
+                }
+                animate();
+                
+                console.log('Three.js initialized');
+            }
+            
+            // Create simple sunglasses
+            function createSunglasses(scene) {
+                console.log('Creating sunglasses...');
+                
+                // Create frame
+                const frameGeometry = new THREE.BoxGeometry(2, 0.15, 0.3);
+                const frameMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFD700 
+                });
+                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+                scene.add(frame);
+                
+                // Create lenses
+                const lensGeometry = new THREE.CircleGeometry(0.7, 32);
+                const lensMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x1a1a1a,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                
+                const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
+                leftLens.position.x = -0.9;
+                leftLens.rotation.y = Math.PI;
+                scene.add(leftLens);
+                
+                const rightLens = leftLens.clone();
+                rightLens.position.x = 0.9;
+                scene.add(rightLens);
+                
+                console.log('Sunglasses created');
+            }
+            
+            // Stop camera
+            function stopCamera() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                
+                startScreen.style.display = 'flex';
+                cameraView.style.display = 'none';
+                controls.style.display = 'none';
+                isCameraOn = false;
+                
+                showToast('Camera stopped');
+            }
+            
+            // Take screenshot
+            function takeScreenshot() {
+                const video = document.getElementById('cameraVideo');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw video
+                ctx.save();
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+                ctx.restore();
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = 'sunglasses-tryon.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                showToast('📸 Photo saved!');
+            }
+            
+            // Show toast message
+            function showToast(message) {
+                toast.textContent = message;
+                toast.classList.add('show');
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+            
+            // Event listeners
+            startButton.addEventListener('click', startCamera);
+            stopButton.addEventListener('click', stopCamera);
+            captureBtn.addEventListener('click', takeScreenshot);
+            
+            console.log('App initialized successfully');
+        });
+    </script>
 
-    <!-- Toast Notifications -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <!-- Screenshot Preview Modal -->
-    <div class="modal" id="screenshotModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Your Look</h3>
-                <button class="modal-close" id="closeModal">×</button>
-            </div>
-            <div class="modal-body">
-                <canvas id="screenshotCanvas"></canvas>
-                <div class="modal-actions">
-                    <button class="btn-secondary" id="downloadBtn">Download</button>
-                    <button class="btn-primary" id="shareBtn">Share</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Performance Monitor (debug) -->
-    <div class="performance-monitor" id="performanceMonitor">
-        <div class="perf-item">FPS: <span id="fpsCounter">0</span></div>
-        <div class="perf-item">Tracking: <span id="trackingStatus">-</span></div>
-        <div class="perf-item">Models: <span id="modelCount">0</span></div>
-    </div>
-
-    <!-- Scripts (deferred for performance) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/examples/js/loaders/GLTFLoader.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    
-    <!-- Main Application -->
-    <script src="main.js" type="module"></script>
+    <!-- Load Three.js AFTER the page loads -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </body>
 </html>
