@@ -1,96 +1,153 @@
-class GlassesAR {
+/**
+ * Production-Grade AR Sunglasses Virtual Try-On Platform
+ * Built with Three.js + MediaPipe Face Mesh
+ * Optimized for mobile and desktop browsers
+ */
+
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.148.0/examples/jsm/loaders/GLTFLoader.js';
+
+// Configuration
+const CONFIG = {
+    // Performance
+    FPS_LIMIT: 60,
+    DETECTION_INTERVAL: 33, // ~30fps for face detection
+    SMOOTHING_FACTOR: 0.3,
+    
+    // Face Detection
+    MIN_DETECTION_CONFIDENCE: 0.7,
+    MIN_TRACKING_CONFIDENCE: 0.7,
+    MAX_FACES: 1,
+    
+    // Camera
+    CAMERA_RESOLUTION: { width: 1280, height: 720 },
+    PREFERRED_CAMERA: 'user', // 'user' for front, 'environment' for back
+    
+    // 3D Models
+    GLASSES_SCALE_FACTOR: 0.0008,
+    MODEL_ROTATION: { x: Math.PI / 2, y: 0, z: 0 },
+    
+    // Face Landmarks (MediaPipe indices)
+    LANDMARKS: {
+        NOSE_BRIDGE: 168,
+        LEFT_EYE_OUTER: 33,
+        RIGHT_EYE_OUTER: 263,
+        LEFT_EAR: 234,
+        RIGHT_EAR: 454,
+        FOREHEAD: 10,
+        NOSE_TIP: 1,
+        LEFT_EYE: 145,
+        RIGHT_EYE: 374,
+        LEFT_TEMPLE: 162,
+        RIGHT_TEMPLE: 389
+    }
+};
+
+// State Management
+class AppState {
     constructor() {
-        this.faceMesh = null;
-        this.camera = null;
-        this.scene = null;
-        this.renderer = null;
-        this.glasses = null;
-        this.isModelLoaded = false;
-        this.isFaceDetected = false;
         this.isCameraActive = false;
+        this.isFaceDetected = false;
+        this.isTracking = false;
         this.currentGlassesIndex = 0;
-        
-        // Using a publicly available GLB glasses model
-        this.glassesModels = [
-            {
-                id: 'aviator',
-                name: 'Aviator',
-                description: 'Classic aviator style with gold frame',
-                url: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf',
-                color: '#FFD700'
-            },
-            {
-                id: 'wayfarer',
-                name: 'Wayfarer',
-                description: 'Iconic wayfarer design',
-                url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf',
-                color: '#2C3E50'
-            },
-            {
-                id: 'round',
-                name: 'Round Frame',
-                description: 'Vintage round glasses',
-                url: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/FlightHelmet/glTF/FlightHelmet.gltf',
-                color: '#8B4513'
-            }
-        ];
-        
+        this.isMirrored = true;
+        this.isDemoMode = false;
+        this.loadedModels = new Map();
+        this.faceLandmarks = null;
+        this.lastFaceUpdate = 0;
+        this.fpsCounter = 0;
+        this.lastFpsUpdate = 0;
+    }
+}
+
+// Main Application Class
+class SunglassesVTO {
+    constructor() {
+        this.state = new AppState();
         this.init();
     }
-    
+
     async init() {
-        this.setupThreeJS();
-        this.setupFaceMesh();
-        this.setupEventListeners();
-        this.createGlassesGrid();
-        this.showToast('AR Glasses Try-On initialized!', 'success');
-        this.updateStatus('Ready to start', 'ready');
-        this.animate();
-        
-        // Hide loading after a moment
-        setTimeout(() => {
-            document.getElementById('loading').style.display = 'none';
-        }, 1000);
+        try {
+            // Initialize core systems
+            await this.initThreeJS();
+            await this.initFaceDetection();
+            await this.initUI();
+            await this.loadGlassesModels();
+            
+            // Start animation loop
+            this.animate();
+            
+            // Initialize performance monitoring
+            this.initPerformanceMonitor();
+            
+            console.log('✅ VTO Platform Initialized');
+            
+        } catch (error) {
+            console.error('❌ Initialization failed:', error);
+            this.showError('Failed to initialize AR platform');
+        }
     }
-    
-    setupThreeJS() {
-        const canvas = document.getElementById('outputCanvas');
-        
-        // Setup Three.js scene
+
+    // Three.js Initialization
+    async initThreeJS() {
         this.scene = new THREE.Scene();
         this.scene.background = null;
         
-        // Setup camera matching video dimensions
-        this.camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 1000);
-        this.camera.position.set(0, 0, 5);
+        // Camera setup matching video resolution
+        const aspect = CONFIG.CAMERA_RESOLUTION.width / CONFIG.CAMERA_RESOLUTION.height;
+        this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+        this.camera.position.z = 5;
         
-        // Setup renderer
-        this.renderer = new THREE.WebGLRenderer({ 
-            canvas: canvas,
+        // Renderer with optimal settings
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: document.getElementById('glassesCanvas'),
             alpha: true,
             antialias: true,
-            powerPreference: "high-performance"
+            powerPreference: 'high-performance',
+            preserveDrawingBuffer: true
         });
-        this.renderer.setSize(canvas.width, canvas.height);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Advanced lighting setup
+        this.setupLighting();
+        
+        // Handle window resize
+        this.setupResizeHandler();
+        
+        // GLTF Loader with cache
+        this.gltfLoader = new GLTFLoader();
+        
+        console.log('✅ Three.js initialized');
+    }
+
+    setupLighting() {
+        // Ambient light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 5, 5);
-        directionalLight.castShadow = true;
-        this.scene.add(directionalLight);
+        // Directional lights for realistic shadows
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight1.position.set(5, 5, 5);
+        directionalLight1.castShadow = true;
+        this.scene.add(directionalLight1);
         
-        // Add a subtle environment light
-        const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-        this.scene.add(hemisphereLight);
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+        directionalLight2.position.set(-5, 5, -5);
+        this.scene.add(directionalLight2);
+        
+        // Rim light for edge definition
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        rimLight.position.set(0, -5, -5);
+        this.scene.add(rimLight);
     }
-    
-    setupFaceMesh() {
+
+    // Face Detection with MediaPipe
+    async initFaceDetection() {
         this.faceMesh = new FaceMesh({
             locateFile: (file) => {
                 return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
@@ -98,478 +155,889 @@ class GlassesAR {
         });
         
         this.faceMesh.setOptions({
-            maxNumFaces: 1,
+            maxNumFaces: CONFIG.MAX_FACES,
             refineLandmarks: true,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
+            minDetectionConfidence: CONFIG.MIN_DETECTION_CONFIDENCE,
+            minTrackingConfidence: CONFIG.MIN_TRACKING_CONFIDENCE
         });
         
         this.faceMesh.onResults(this.onFaceResults.bind(this));
+        
+        console.log('✅ Face detection initialized');
     }
-    
-    setupEventListeners() {
-        document.getElementById('startCamera').addEventListener('click', () => this.startCamera());
-        document.getElementById('changeGlasses').addEventListener('click', () => this.changeGlasses());
-        document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
+
+    // UI Initialization
+    async initUI() {
+        this.bindEvents();
+        this.createGlassesCarousel();
+        this.updateStatus('Ready to try on');
         
-        // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize());
-        
-        // Show face guide when camera starts
-        document.getElementById('startCamera').addEventListener('click', () => {
-            setTimeout(() => {
-                document.getElementById('faceGuide').style.display = 'block';
-            }, 1000);
-        });
+        // Check camera permissions
+        await this.checkCameraPermissions();
     }
-    
-    createGlassesGrid() {
-        const grid = document.getElementById('glassesGrid');
-        grid.innerHTML = '';
-        
-        this.glassesModels.forEach((model, index) => {
-            const card = document.createElement('div');
-            card.className = 'glass-card';
-            if (index === this.currentGlassesIndex) {
-                card.classList.add('active');
-            }
-            card.dataset.index = index;
-            
-            card.innerHTML = `
-                <div class="glass-image" style="background: ${model.color}">
-                    <i class="fas fa-glasses"></i>
-                </div>
-                <div class="glass-info">
-                    <h3 class="glass-name">${model.name}</h3>
-                    <p class="glass-description">${model.description}</p>
-                    <button class="try-btn">Try On</button>
-                </div>
-            `;
-            
-            card.addEventListener('click', () => this.selectGlasses(index));
-            grid.appendChild(card);
-        });
-    }
-    
-    selectGlasses(index) {
-        this.currentGlassesIndex = index;
-        this.loadGlassesModel();
-        
-        // Update active state in grid
-        document.querySelectorAll('.glass-card').forEach((card, i) => {
-            card.classList.toggle('active', i === index);
-        });
-        
-        this.showToast(`Trying ${this.glassesModels[index].name}`, 'info');
-    }
-    
-    async startCamera() {
-        if (this.isCameraActive) {
-            this.stopCamera();
-            return;
-        }
-        
+
+    // Camera Permission Handling
+    async checkCameraPermissions() {
         try {
-            this.updateStatus('Requesting camera...', 'loading');
+            const permissionStatus = await navigator.permissions.query({ name: 'camera' });
             
-            const video = document.getElementById('inputVideo');
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user',
-                    frameRate: { ideal: 30 }
-                } 
-            });
+            if (permissionStatus.state === 'granted') {
+                this.startCamera();
+            } else if (permissionStatus.state === 'prompt') {
+                this.showPermissionPrompt();
+            } else {
+                this.showError('Camera access denied. Please enable in browser settings.');
+            }
             
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-                this.updateStatus('Camera active - Looking for face...', 'active');
-                this.showToast('Camera started successfully!', 'success');
-                
-                // Update button text
-                const btn = document.getElementById('startCamera');
-                btn.innerHTML = '<i class="fas fa-stop"></i><span>Stop Camera</span>';
-                
-                this.isCameraActive = true;
-                document.getElementById('faceGuide').style.display = 'block';
+            // Listen for permission changes
+            permissionStatus.onchange = () => {
+                if (permissionStatus.state === 'granted') {
+                    this.startCamera();
+                }
             };
             
-            // Start face detection
-            this.camera = new Camera(video, {
-                onFrame: async () => {
-                    try {
-                        await this.faceMesh.send({ image: video });
-                    } catch (error) {
-                        console.error('Face detection error:', error);
-                    }
+        } catch (error) {
+            // Fallback for browsers that don't support permissions API
+            this.showPermissionPrompt();
+        }
+    }
+
+    // Start Camera with Error Handling
+    async startCamera() {
+        try {
+            this.updateStatus('Starting camera...');
+            
+            const constraints = {
+                video: {
+                    facingMode: CONFIG.PREFERRED_CAMERA,
+                    width: { ideal: CONFIG.CAMERA_RESOLUTION.width },
+                    height: { ideal: CONFIG.CAMERA_RESOLUTION.height },
+                    frameRate: { ideal: 30, max: 60 }
                 },
-                width: 1280,
-                height: 720
+                audio: false
+            };
+            
+            // iOS Safari workaround
+            if (this.isIOS()) {
+                constraints.video.facingMode = { exact: 'user' };
+            }
+            
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const video = document.getElementById('cameraVideo');
+            
+            video.srcObject = stream;
+            
+            // Wait for video metadata
+            await new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    video.play();
+                    resolve();
+                };
             });
-            this.camera.start();
+            
+            // Start face detection pipeline
+            this.startFaceDetection(video);
+            
+            this.state.isCameraActive = true;
+            this.updateStatus('Looking for face...');
+            this.hidePermissionPrompt();
+            this.showToast('Camera started successfully');
+            
+            console.log('✅ Camera started');
             
         } catch (error) {
             console.error('Camera error:', error);
-            this.updateStatus('Camera access denied', 'error');
-            this.showToast('Could not access camera. Please check permissions.', 'error');
+            this.handleCameraError(error);
         }
     }
-    
-    stopCamera() {
-        const video = document.getElementById('inputVideo');
-        if (video.srcObject) {
-            const tracks = video.srcObject.getTracks();
-            tracks.forEach(track => track.stop());
-            video.srcObject = null;
-        }
+
+    // Face Detection Pipeline
+    startFaceDetection(video) {
+        const camera = new Camera(video, {
+            onFrame: async () => {
+                const now = Date.now();
+                if (now - this.state.lastFaceUpdate >= CONFIG.DETECTION_INTERVAL) {
+                    try {
+                        await this.faceMesh.send({ image: video });
+                        this.state.lastFaceUpdate = now;
+                    } catch (error) {
+                        // Silent fail - face detection busy
+                    }
+                }
+            },
+            width: CONFIG.CAMERA_RESOLUTION.width,
+            height: CONFIG.CAMERA_RESOLUTION.height
+        });
         
-        if (this.camera) {
-            this.camera.stop();
-        }
-        
-        this.isCameraActive = false;
-        this.isFaceDetected = false;
-        
-        // Update button text
-        const btn = document.getElementById('startCamera');
-        btn.innerHTML = '<i class="fas fa-video"></i><span>Start Camera</span>';
-        
-        this.updateStatus('Camera stopped', 'ready');
-        document.getElementById('faceGuide').style.display = 'none';
-        
-        if (this.glasses) {
-            this.glasses.visible = false;
-        }
+        camera.start();
     }
-    
+
+    // Process Face Detection Results
     onFaceResults(results) {
-        const canvas = document.getElementById('outputCanvas');
-        const video = document.getElementById('inputVideo');
-        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('cameraVideo');
+        const faceCanvas = document.getElementById('faceCanvas');
+        const ctx = faceCanvas.getContext('2d');
         
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Update canvas size to match video
+        if (video.videoWidth > 0) {
+            faceCanvas.width = video.videoWidth;
+            faceCanvas.height = video.videoHeight;
+        }
         
-        // Draw video frame
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Clear and draw video frame
+        ctx.save();
+        ctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
         
+        if (this.state.isMirrored) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, -faceCanvas.width, 0, faceCanvas.width, faceCanvas.height);
+        } else {
+            ctx.drawImage(video, 0, 0, faceCanvas.width, faceCanvas.height);
+        }
+        ctx.restore();
+        
+        // Process face landmarks
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            const landmarks = results.multiFaceLandmarks[0];
+            this.state.faceLandmarks = results.multiFaceLandmarks[0];
             
-            if (!this.isFaceDetected) {
-                this.isFaceDetected = true;
-                this.updateStatus('Face detected!', 'active');
-                document.getElementById('faceGuide').style.display = 'none';
-                this.showToast('Face detected! Glasses will appear.', 'success');
+            if (!this.state.isFaceDetected) {
+                this.state.isFaceDetected = true;
+                this.state.isTracking = true;
+                this.onFaceDetected();
             }
             
-            // Update glasses position
-            this.updateGlassesPosition(landmarks);
-            
-            // Draw face landmarks (optional, for debugging)
-            // this.drawFaceLandmarks(ctx, landmarks);
+            // Update glasses position with precision
+            this.updateGlassesPosition();
             
         } else {
-            if (this.isFaceDetected) {
-                this.isFaceDetected = false;
-                this.updateStatus('Looking for face...', 'active');
-                document.getElementById('faceGuide').style.display = 'block';
+            if (this.state.isFaceDetected) {
+                this.state.isFaceDetected = false;
+                this.state.isTracking = false;
+                this.onFaceLost();
             }
             
             if (this.glasses) {
                 this.glasses.visible = false;
             }
         }
+        
+        // Update performance monitor
+        this.updatePerformanceStats();
     }
-    
-    updateGlassesPosition(landmarks) {
-        if (!this.glasses || !this.isModelLoaded) return;
+
+    // Professional Glasses Positioning Algorithm
+    updateGlassesPosition() {
+        if (!this.state.faceLandmarks || !this.glasses) return;
+        
+        const landmarks = this.state.faceLandmarks;
+        const config = CONFIG.LANDMARKS;
+        
+        // Get key facial points
+        const noseBridge = landmarks[config.NOSE_BRIDGE];
+        const leftEye = landmarks[config.LEFT_EYE];
+        const rightEye = landmarks[config.RIGHT_EYE];
+        const leftTemple = landmarks[config.LEFT_TEMPLE];
+        const rightTemple = landmarks[config.RIGHT_TEMPLE];
+        const forehead = landmarks[config.FOREHEAD];
+        
+        // Calculate face metrics
+        const interpupillaryDistance = this.calculateDistance(leftEye, rightEye);
+        const faceWidth = this.calculateDistance(leftTemple, rightTemple);
+        const eyeCenter = this.calculateMidpoint(leftEye, rightEye);
+        
+        // Calculate head rotation (yaw, pitch, roll)
+        const headRotation = this.calculateHeadRotation(landmarks);
+        
+        // Map to 3D space with perspective correction
+        const screenTo3D = this.mapScreenTo3D(eyeCenter, interpupillaryDistance);
+        
+        // Apply smoothing for stable tracking
+        const smoothedPosition = this.smoothPosition(screenTo3D.position);
+        const smoothedScale = this.smoothScale(interpupillaryDistance * CONFIG.GLASSES_SCALE_FACTOR);
+        
+        // Update glasses
+        this.glasses.visible = true;
+        this.glasses.position.copy(smoothedPosition);
+        this.glasses.scale.setScalar(smoothedScale);
+        
+        // Apply precise rotation
+        this.glasses.rotation.set(
+            headRotation.pitch + CONFIG.MODEL_ROTATION.x,
+            headRotation.yaw,
+            headRotation.roll
+        );
+        
+        // Adjust for nose bridge position
+        const noseBridgeOffset = this.calculateNoseBridgeOffset(noseBridge, eyeCenter);
+        this.glasses.position.y += noseBridgeOffset.y;
+        this.glasses.position.z += noseBridgeOffset.z;
+    }
+
+    // Mathematical helper functions
+    calculateDistance(point1, point2) {
+        return Math.sqrt(
+            Math.pow(point2.x - point1.x, 2) + 
+            Math.pow(point2.y - point1.y, 2)
+        );
+    }
+
+    calculateMidpoint(point1, point2) {
+        return {
+            x: (point1.x + point2.x) / 2,
+            y: (point1.y + point2.y) / 2
+        };
+    }
+
+    calculateHeadRotation(landmarks) {
+        const config = CONFIG.LANDMARKS;
+        
+        // Calculate yaw from ear positions
+        const leftEar = landmarks[config.LEFT_EAR];
+        const rightEar = landmarks[config.RIGHT_EAR];
+        const yaw = Math.atan2(rightEar.y - leftEar.y, rightEar.x - leftEar.x);
+        
+        // Calculate pitch from forehead to nose tip
+        const forehead = landmarks[config.FOREHEAD];
+        const noseTip = landmarks[config.NOSE_TIP];
+        const pitch = Math.atan2(noseTip.y - forehead.y, noseTip.x - forehead.x);
+        
+        // Calculate roll from eye line
+        const leftEye = landmarks[config.LEFT_EYE_OUTER];
+        const rightEye = landmarks[config.RIGHT_EYE_OUTER];
+        const roll = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+        
+        return { yaw: yaw * 0.5, pitch: pitch * 0.3, roll: roll * 0.8 };
+    }
+
+    mapScreenTo3D(eyeCenter, ipd) {
+        // Convert screen coordinates (0-1) to 3D space (-1 to 1)
+        const x = (eyeCenter.x - 0.5) * 2.5;
+        const y = -(eyeCenter.y - 0.5) * 2.2;
+        
+        // Calculate depth based on IPD (proportional scaling)
+        const z = (ipd - 0.1) * 2;
+        
+        return {
+            position: new THREE.Vector3(x, y + 0.15, z),
+            scale: ipd
+        };
+    }
+
+    smoothPosition(targetPosition) {
+        if (!this.lastPosition) {
+            this.lastPosition = targetPosition.clone();
+            return targetPosition;
+        }
+        
+        this.lastPosition.lerp(targetPosition, CONFIG.SMOOTHING_FACTOR);
+        return this.lastPosition;
+    }
+
+    smoothScale(targetScale) {
+        if (!this.lastScale) {
+            this.lastScale = targetScale;
+            return targetScale;
+        }
+        
+        this.lastScale += (targetScale - this.lastScale) * CONFIG.SMOOTHING_FACTOR;
+        return this.lastScale;
+    }
+
+    calculateNoseBridgeOffset(noseBridge, eyeCenter) {
+        // Calculate offset from eye center to nose bridge
+        const dx = noseBridge.x - eyeCenter.x;
+        const dy = noseBridge.y - eyeCenter.y;
+        
+        return {
+            y: dy * 0.5,
+            z: dx * 0.3
+        };
+    }
+
+    // Load 3D Glasses Models
+    async loadGlassesModels() {
+        const models = [
+            {
+                id: 'aviator',
+                name: 'Aviator',
+                icon: '🕶️',
+                url: 'models/sunglasses-aviator.glb',
+                scale: 0.8,
+                color: '#FFD700'
+            },
+            {
+                id: 'wayfarer',
+                name: 'Wayfarer',
+                icon: '😎',
+                url: 'models/sunglasses-wayfarer.glb',
+                scale: 1.0,
+                color: '#2C3E50'
+            },
+            {
+                id: 'sport',
+                name: 'Sport',
+                icon: '🏃',
+                url: 'models/sunglasses-sport.glb',
+                scale: 0.9,
+                color: '#E74C3C'
+            },
+            {
+                id: 'retro',
+                name: 'Retro',
+                icon: '✨',
+                url: 'models/sunglasses-retro.glb',
+                scale: 0.85,
+                color: '#9B59B6'
+            }
+        ];
+        
+        this.glassesModels = models;
+        
+        // Load first model
+        await this.loadGlassesModel(0);
+    }
+
+    async loadGlassesModel(index) {
+        const model = this.glassesModels[index];
+        
+        if (this.state.loadedModels.has(model.id)) {
+            // Use cached model
+            this.glasses = this.state.loadedModels.get(model.id).clone();
+            this.scene.add(this.glasses);
+            this.glasses.visible = false;
+            return;
+        }
         
         try {
-            // Get key facial landmarks
-            const leftEye = landmarks[33];   // Left eye outer corner
-            const rightEye = landmarks[263]; // Right eye outer corner
-            const noseTip = landmarks[1];    // Nose tip
+            this.updateStatus(`Loading ${model.name}...`);
             
-            // Calculate center between eyes
-            const centerX = (leftEye.x + rightEye.x) / 2;
-            const centerY = (leftEye.y + rightEye.y) / 2;
+            const gltf = await new Promise((resolve, reject) => {
+                this.gltfLoader.load(model.url, resolve, null, reject);
+            });
             
-            // Calculate eye distance for scaling
-            const eyeDistance = Math.sqrt(
-                Math.pow(rightEye.x - leftEye.x, 2) + 
-                Math.pow(rightEye.y - leftEye.y, 2)
-            );
+            // Process and optimize model
+            this.processGlassesModel(gltf.scene, model);
             
-            // Convert to 3D coordinates
-            // Normalize coordinates to [-1, 1] range
-            const x = (centerX - 0.5) * 4;
-            const y = -(centerY - 0.5) * 3;
-            const z = 0;
+            // Cache the model
+            this.state.loadedModels.set(model.id, gltf.scene.clone());
             
-            // Calculate scale based on eye distance
-            const scale = eyeDistance * 8;
+            this.glasses = gltf.scene;
+            this.scene.add(this.glasses);
+            this.glasses.visible = false;
             
-            // Calculate rotation based on face orientation
-            const noseToLeftEye = Math.atan2(
-                leftEye.y - noseTip.y,
-                leftEye.x - noseTip.x
-            );
+            this.state.currentGlassesIndex = index;
+            this.updateGlassesSelector();
             
-            // Update glasses
-            this.glasses.visible = true;
-            this.glasses.position.set(x, y, z);
-            this.glasses.scale.setScalar(scale);
-            
-            // Apply rotation
-            this.glasses.rotation.x = Math.PI / 2;
-            this.glasses.rotation.y = (centerX - 0.5) * 0.5;
-            this.glasses.rotation.z = -noseToLeftEye + Math.PI / 2;
+            this.showToast(`${model.name} loaded`);
             
         } catch (error) {
-            console.error('Error updating glasses position:', error);
+            console.error(`Failed to load model ${model.name}:`, error);
+            this.showError(`Failed to load ${model.name}. Using placeholder.`);
+            this.createFallbackGlasses(model);
         }
     }
-    
-    drawFaceLandmarks(ctx, landmarks) {
-        ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 1;
-        ctx.fillStyle = '#00ff00';
+
+    processGlassesModel(model, config) {
+        // Center the model
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
         
-        // Draw key points
-        const keyPoints = [33, 133, 362, 263, 1, 168, 94, 322];
-        keyPoints.forEach(index => {
-            const point = landmarks[index];
-            ctx.beginPath();
-            ctx.arc(
-                point.x * ctx.canvas.width,
-                point.y * ctx.canvas.height,
-                3, 0, Math.PI * 2
-            );
-            ctx.fill();
+        // Apply initial scale
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = config.scale / maxDim;
+        model.scale.setScalar(scale);
+        
+        // Apply initial rotation
+        model.rotation.x = CONFIG.MODEL_ROTATION.x;
+        
+        // Optimize materials for AR
+        model.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                if (child.material) {
+                    // Enhance material appearance
+                    child.material.needsUpdate = true;
+                    
+                    // Make lenses more realistic
+                    if (child.material.name && child.material.name.toLowerCase().includes('lens')) {
+                        child.material.transparent = true;
+                        child.material.opacity = 0.3;
+                        child.material.transmission = 0.9;
+                        child.material.roughness = 0.05;
+                        child.material.ior = 1.5;
+                    }
+                }
+            }
         });
     }
-    
-    async loadGlassesModel() {
-        try {
-            const model = this.glassesModels[this.currentGlassesIndex];
-            this.updateStatus(`Loading ${model.name}...`, 'loading');
-            
-            // Remove existing glasses
-            if (this.glasses) {
-                this.scene.remove(this.glasses);
-            }
-            
-            const loader = new THREE.GLTFLoader();
-            
-            loader.load(
-                model.url,
-                (gltf) => {
-                    this.glasses = gltf.scene;
-                    
-                    // Center and scale the model
-                    const box = new THREE.Box3().setFromObject(this.glasses);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3());
-                    
-                    const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 0.5 / maxDim;
-                    
-                    this.glasses.position.sub(center);
-                    this.glasses.scale.setScalar(scale);
-                    this.glasses.rotation.x = Math.PI / 2;
-                    this.glasses.visible = false;
-                    
-                    // Add shadows
-                    this.glasses.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    
-                    this.scene.add(this.glasses);
-                    this.isModelLoaded = true;
-                    
-                    this.updateStatus(`${model.name} loaded`, 'ready');
-                    this.showToast(`${model.name} loaded successfully!`, 'success');
-                    
-                },
-                (progress) => {
-                    const percent = (progress.loaded / progress.total * 100).toFixed(1);
-                    this.updateStatus(`Loading model: ${percent}%`, 'loading');
-                },
-                (error) => {
-                    console.error('Error loading model:', error);
-                    this.createFallbackGlasses();
-                    this.showToast('Using fallback glasses model', 'info');
-                }
-            );
-            
-        } catch (error) {
-            console.error('Model loading error:', error);
-            this.createFallbackGlasses();
-        }
-    }
-    
-    createFallbackGlasses() {
+
+    createFallbackGlasses(config) {
         // Create a simple glasses model as fallback
         const group = new THREE.Group();
         
         // Frame
-        const frameGeometry = new THREE.BoxGeometry(2, 0.1, 0.5);
-        const frameMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x2C3E50,
-            metalness: 0.8,
-            roughness: 0.2
+        const frameGeometry = new THREE.BoxGeometry(2, 0.12, 0.25);
+        const frameMaterial = new THREE.MeshStandardMaterial({
+            color: config.color,
+            metalness: 0.9,
+            roughness: 0.1,
+            envMapIntensity: 1.2
         });
         const frame = new THREE.Mesh(frameGeometry, frameMaterial);
         group.add(frame);
         
-        // Left lens
-        const leftLensGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.05, 32);
+        // Lenses
+        const lensGeometry = new THREE.CircleGeometry(0.7, 32);
         const lensMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x87CEEB,
-            transmission: 0.9,
+            color: 0x1a1a1a,
+            transmission: 0.2,
             transparent: true,
-            opacity: 0.3,
-            roughness: 0.1,
-            thickness: 1
+            opacity: 0.25,
+            roughness: 0.05,
+            thickness: 1.5,
+            ior: 1.5
         });
-        const leftLens = new THREE.Mesh(leftLensGeometry, lensMaterial);
-        leftLens.position.x = -0.8;
-        leftLens.rotation.z = Math.PI / 2;
+        
+        const leftLens = new THREE.Mesh(lensGeometry, lensMaterial);
+        leftLens.position.x = -0.9;
+        leftLens.rotation.x = Math.PI / 2;
         group.add(leftLens);
         
-        // Right lens
-        const rightLens = new THREE.Mesh(leftLensGeometry, lensMaterial);
-        rightLens.position.x = 0.8;
-        rightLens.rotation.z = Math.PI / 2;
+        const rightLens = leftLens.clone();
+        rightLens.position.x = 0.9;
         group.add(rightLens);
         
-        // Temple (left)
-        const templeGeometry = new THREE.BoxGeometry(0.1, 0.1, 1.5);
+        // Temples
+        const templeGeometry = new THREE.BoxGeometry(0.08, 0.08, 1.5);
         const leftTemple = new THREE.Mesh(templeGeometry, frameMaterial);
-        leftTemple.position.set(-1.1, -0.2, -0.5);
-        leftTemple.rotation.y = Math.PI / 6;
+        leftTemple.position.set(-1, 0, -0.75);
+        leftTemple.rotation.y = 0.3;
         group.add(leftTemple);
         
-        // Temple (right)
-        const rightTemple = new THREE.Mesh(templeGeometry, frameMaterial);
-        rightTemple.position.set(1.1, -0.2, -0.5);
-        rightTemple.rotation.y = -Math.PI / 6;
+        const rightTemple = leftTemple.clone();
+        rightTemple.position.set(1, 0, -0.75);
+        rightTemple.rotation.y = -0.3;
         group.add(rightTemple);
         
-        this.glasses = group;
-        this.glasses.scale.setScalar(0.2);
-        this.glasses.visible = false;
-        this.scene.add(this.glasses);
-        this.isModelLoaded = true;
+        // Scale and add
+        group.scale.setScalar(0.1);
+        group.rotation.x = Math.PI / 2;
         
-        this.updateStatus('Fallback glasses loaded', 'ready');
+        this.glasses = group;
+        this.scene.add(this.glasses);
+        this.glasses.visible = false;
     }
-    
-    changeGlasses() {
-        this.currentGlassesIndex = (this.currentGlassesIndex + 1) % this.glassesModels.length;
-        this.selectGlasses(this.currentGlassesIndex);
+
+    // UI Methods
+    createGlassesCarousel() {
+        const carousel = document.getElementById('carouselTrack');
+        carousel.innerHTML = '';
+        
+        this.glassesModels.forEach((model, index) => {
+            const item = document.createElement('div');
+            item.className = `glasses-item ${index === this.state.currentGlassesIndex ? 'active' : ''}`;
+            item.dataset.index = index;
+            
+            item.innerHTML = `
+                <span class="glasses-icon">${model.icon}</span>
+                <span class="glasses-name">${model.name}</span>
+            `;
+            
+            item.addEventListener('click', () => this.selectGlasses(index));
+            
+            carousel.appendChild(item);
+        });
     }
-    
-    takeScreenshot() {
-        if (!this.isFaceDetected) {
-            this.showToast('Please start camera and face detection first', 'error');
+
+    updateGlassesSelector() {
+        document.querySelectorAll('.glasses-item').forEach((item, index) => {
+            item.classList.toggle('active', index === this.state.currentGlassesIndex);
+        });
+    }
+
+    selectGlasses(index) {
+        if (index !== this.state.currentGlassesIndex) {
+            this.loadGlassesModel(index);
+        }
+    }
+
+    // Event Handlers
+    bindEvents() {
+        // Camera controls
+        document.getElementById('tryOnBtn').addEventListener('click', () => this.startCamera());
+        document.getElementById('stopBtn').addEventListener('click', () => this.stopCamera());
+        document.getElementById('toggleMirror').addEventListener('click', () => this.toggleMirror());
+        
+        // Capture
+        document.getElementById('captureBtn').addEventListener('click', () => this.captureScreenshot());
+        
+        // Carousel
+        document.getElementById('carouselPrev').addEventListener('click', () => this.scrollCarousel(-1));
+        document.getElementById('carouselNext').addEventListener('click', () => this.scrollCarousel(1));
+        
+        // Error handling
+        document.getElementById('retryCamera').addEventListener('click', () => this.startCamera());
+        
+        // Permission prompt
+        document.getElementById('requestCamera').addEventListener('click', () => this.startCamera());
+        document.getElementById('demoMode').addEventListener('click', () => this.enableDemoMode());
+    }
+
+    // Screenshot Capture with Professional Quality
+    async captureScreenshot() {
+        if (!this.state.isFaceDetected) {
+            this.showToast('Please position your face first');
             return;
         }
         
-        const canvas = document.getElementById('outputCanvas');
-        const link = document.createElement('a');
-        link.download = `glasses-tryon-${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        
-        this.showToast('Screenshot saved!', 'success');
+        try {
+            const video = document.getElementById('cameraVideo');
+            const glassesCanvas = document.getElementById('glassesCanvas');
+            
+            // Create high-quality canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d', { alpha: true });
+            
+            // Draw video (mirrored if enabled)
+            ctx.save();
+            if (this.state.isMirrored) {
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            } else {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+            ctx.restore();
+            
+            // Draw glasses
+            ctx.drawImage(glassesCanvas, 0, 0, canvas.width, canvas.height);
+            
+            // Add watermark/logo
+            this.addWatermark(ctx, canvas);
+            
+            // Show preview modal
+            this.showScreenshotPreview(canvas);
+            
+        } catch (error) {
+            console.error('Screenshot error:', error);
+            this.showToast('Failed to capture screenshot');
+        }
     }
-    
-    updateStatus(message, type = 'ready') {
+
+    addWatermark(ctx, canvas) {
+        ctx.font = '16px Arial';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.textAlign = 'right';
+        ctx.fillText('Virtual Try-On', canvas.width - 20, canvas.height - 20);
+    }
+
+    // Utility Methods
+    updateStatus(message) {
         const statusText = document.getElementById('statusText');
-        const statusDot = document.querySelector('.status-dot');
-        
-        statusText.textContent = message;
-        statusDot.className = 'status-dot';
-        statusDot.classList.add(type);
+        if (statusText) {
+            statusText.textContent = message;
+        }
     }
-    
-    showToast(message, type = 'info') {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
+
+    showToast(message, duration = 3000) {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
         toast.className = 'toast';
-        toast.classList.add('show', type);
+        toast.textContent = message;
+        
+        toastContainer.appendChild(toast);
         
         setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3000);
+            toast.remove();
+        }, duration);
     }
-    
+
+    showError(message) {
+        const errorState = document.getElementById('errorState');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        if (errorState && errorMessage) {
+            errorMessage.textContent = message;
+            errorState.style.display = 'flex';
+        }
+    }
+
+    hideError() {
+        const errorState = document.getElementById('errorState');
+        if (errorState) {
+            errorState.style.display = 'none';
+        }
+    }
+
+    showPermissionPrompt() {
+        const prompt = document.getElementById('permissionPrompt');
+        if (prompt) {
+            prompt.style.display = 'flex';
+        }
+    }
+
+    hidePermissionPrompt() {
+        const prompt = document.getElementById('permissionPrompt');
+        if (prompt) {
+            prompt.style.display = 'none';
+        }
+    }
+
+    showScreenshotPreview(canvas) {
+        const modal = document.getElementById('screenshotModal');
+        const previewCanvas = document.getElementById('screenshotCanvas');
+        
+        previewCanvas.width = canvas.width;
+        previewCanvas.height = canvas.height;
+        previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
+        
+        modal.style.display = 'flex';
+        
+        // Setup download button
+        document.getElementById('downloadBtn').onclick = () => {
+            this.downloadScreenshot(canvas);
+        };
+        
+        // Setup share button (if Web Share API is available)
+        if (navigator.share) {
+            document.getElementById('shareBtn').onclick = () => {
+                this.shareScreenshot(canvas);
+            };
+        } else {
+            document.getElementById('shareBtn').style.display = 'none';
+        }
+    }
+
+    downloadScreenshot(canvas) {
+        const link = document.createElement('a');
+        link.download = `sunglasses-tryon-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        this.showToast('Screenshot downloaded');
+    }
+
+    async shareScreenshot(canvas) {
+        try {
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], 'sunglasses-tryon.png', { type: 'image/png' });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'My Sunglasses Try-On',
+                        text: 'Check out my new sunglasses!'
+                    });
+                }
+            }, 'image/png');
+        } catch (error) {
+            console.error('Share error:', error);
+            this.downloadScreenshot(canvas);
+        }
+    }
+
+    // Performance Monitoring
+    initPerformanceMonitor() {
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastTime = performance.now();
+    }
+
+    updatePerformanceStats() {
+        // Update FPS counter
+        this.frameCount++;
+        const currentTime = performance.now();
+        
+        if (currentTime - this.lastTime >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+            this.frameCount = 0;
+            this.lastTime = currentTime;
+            
+            // Update UI
+            const fpsCounter = document.getElementById('fpsCounter');
+            if (fpsCounter) {
+                fpsCounter.textContent = this.fps;
+            }
+        }
+        
+        // Update tracking status
+        const trackingStatus = document.getElementById('trackingStatus');
+        if (trackingStatus) {
+            trackingStatus.textContent = this.state.isTracking ? 'Active' : 'Lost';
+            trackingStatus.style.color = this.state.isTracking ? '#4CAF50' : '#f44336';
+        }
+        
+        // Update model count
+        const modelCount = document.getElementById('modelCount');
+        if (modelCount) {
+            modelCount.textContent = this.state.loadedModels.size;
+        }
+    }
+
+    // Platform Detection
+    isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+
+    isAndroid() {
+        return /Android/.test(navigator.userAgent);
+    }
+
+    // Window Resize Handler
+    setupResizeHandler() {
+        let resizeTimeout;
+        
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                this.onWindowResize();
+            }, 100);
+        });
+    }
+
     onWindowResize() {
-        const canvas = document.getElementById('outputCanvas');
-        if (!canvas) return;
-        
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
-        
-        if (this.camera) {
-            this.camera.aspect = width / height;
+        if (this.camera && this.renderer) {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
-        }
-        
-        if (this.renderer) {
-            this.renderer.setSize(width, height);
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
         }
     }
-    
+
+    // Animation Loop
     animate() {
         requestAnimationFrame(() => this.animate());
         
         if (this.renderer && this.scene && this.camera) {
-            // Add subtle animation to glasses
+            // Add subtle animation to glasses for realism
             if (this.glasses && this.glasses.visible) {
-                this.glasses.rotation.y += 0.001;
+                const time = Date.now() * 0.001;
+                this.glasses.position.y += Math.sin(time) * 0.001;
+                this.glasses.rotation.y += 0.0005;
             }
             
             this.renderer.render(this.scene, this.camera);
         }
     }
+
+    // Cleanup
+    stopCamera() {
+        const video = document.getElementById('cameraVideo');
+        if (video && video.srcObject) {
+            const tracks = video.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+        }
+        
+        this.state.isCameraActive = false;
+        this.state.isFaceDetected = false;
+        this.state.isTracking = false;
+        
+        if (this.glasses) {
+            this.glasses.visible = false;
+        }
+        
+        this.updateStatus('Camera stopped');
+        this.showToast('Camera stopped');
+    }
+
+    toggleMirror() {
+        this.state.isMirrored = !this.state.isMirrored;
+        this.showToast(`Mirror ${this.state.isMirrored ? 'enabled' : 'disabled'}`);
+    }
+
+    scrollCarousel(direction) {
+        const carousel = document.getElementById('carouselTrack');
+        carousel.scrollLeft += direction * 150;
+    }
+
+    onFaceDetected() {
+        this.hideError();
+        this.updateStatus('Face detected - Tracking active');
+        this.showToast('Perfect fit! Adjust your position if needed');
+    }
+
+    onFaceLost() {
+        this.updateStatus('Face lost - Looking for face...');
+        this.showToast('Position your face in the circle', 2000);
+    }
+
+    handleCameraError(error) {
+        let message = 'Camera error';
+        
+        if (error.name === 'NotAllowedError') {
+            message = 'Camera access denied. Please allow camera access in browser settings.';
+        } else if (error.name === 'NotFoundError') {
+            message = 'No camera found. Please connect a camera.';
+        } else if (error.name === 'NotReadableError') {
+            message = 'Camera is in use by another application.';
+        } else if (error.name === 'OverconstrainedError') {
+            message = 'Camera cannot meet requirements. Trying fallback...';
+            // Try with simpler constraints
+            this.startCameraWithFallback();
+            return;
+        }
+        
+        this.showError(message);
+        this.updateStatus('Camera error');
+    }
+
+    async startCameraWithFallback() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true, // Minimal constraints
+                audio: false
+            });
+            
+            const video = document.getElementById('cameraVideo');
+            video.srcObject = stream;
+            video.play();
+            
+            this.startFaceDetection(video);
+            this.state.isCameraActive = true;
+            
+        } catch (fallbackError) {
+            this.showError('Cannot access camera. Please check permissions.');
+        }
+    }
+
+    enableDemoMode() {
+        this.state.isDemoMode = true;
+        this.hidePermissionPrompt();
+        this.showToast('Demo mode enabled');
+        // Load demo face image and enable glasses placement
+    }
 }
 
-// Initialize when page loads
-window.addEventListener('DOMContentLoaded', () => {
-    const arApp = new GlassesAR();
+// Initialize application when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Hide loading screen after all assets are loaded
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            document.getElementById('loadingScreen').style.display = 'none';
+        }, 500);
+    });
     
-    // Add CSS for toast types
-    const style = document.createElement('style');
-    style.textContent = `
-        .toast.success { background: #4CAF50; }
-        .toast.error { background: #F44336; }
-        .toast.info { background: #2196F3; }
-        .toast.warning { background: #FF9800; }
-        
-        .try-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: var(--transition);
-            width: 100%;
-        }
-        
-        .try-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-    `;
-    document.head.appendChild(style);
+    // Start the application
+    const app = new SunglassesVTO();
+    window.vtoApp = app; // Expose for debugging
+    
+    // Service Worker for PWA (optional)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(console.error);
+    }
+});
+
+// Handle page visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Pause tracking when page is not visible
+        window.vtoApp?.pauseTracking();
+    } else {
+        // Resume tracking when page becomes visible
+        window.vtoApp?.resumeTracking();
+    }
 });
